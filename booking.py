@@ -1,5 +1,5 @@
-# ==================== CASHIN INK — BOOKING APP (12-HOUR SCROLL PICKER) ====================
-# VERSION: SLOT-MACHINE-12H-COMPONENT-V1
+# ==================== CASHIN INK — BOOKING APP (12-HOUR SCROLL PICKER, GREY BACKGROUND) ====================
+# VERSION: SLOT-MACHINE-12H-GREY-V1
 
 import streamlit as st
 import sqlite3
@@ -12,7 +12,7 @@ import streamlit.components.v1 as components
 
 # ==================== PAGE CONFIG ====================
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
-st.warning("RUNNING VERSION: SLOT-MACHINE-12H-COMPONENT-V1")
+st.warning("RUNNING VERSION: SLOT-MACHINE-12H-GREY-V1")
 
 # ==================== CONFIG ====================
 DB_PATH = os.path.join(os.getcwd(), "bookings.db")
@@ -23,7 +23,7 @@ STUDIO_TZ = pytz.timezone("America/New_York")
 
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY")
 SUCCESS_URL = st.secrets.get("STRIPE_SUCCESS_URL", "https://your-app.streamlit.app/")
-CANCEL_URL  = st.secrets.get("STRIPE_CANCEL_URL", "https://your-app.streamlit.app/")
+CANCEL_URL  = st.secrets.get("STRIPE_CANCEL_URL",  "https://your-app.streamlit.app/")
 ORGANIZER_EMAIL = st.secrets.get("ORGANIZER_EMAIL", "julio@cashinink.com")
 
 # ==================== DATABASE ====================
@@ -69,6 +69,9 @@ st.info("2-hour session • Deposit locks your spot")
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
+if "appt_time_str" not in st.session_state:
+    st.session_state.appt_time_str = "13:00"  # default 1:00 PM
+
 with st.form("booking_form"):
     name  = st.text_input("Full Name*")
     age   = st.number_input("Age*", 18, 100, 18)
@@ -86,15 +89,24 @@ with st.form("booking_form"):
 
     appt_date = st.date_input("Choose Date*", min_value=datetime.today() + timedelta(days=1))
 
-    # ==================== SLOT-MACHINE STYLE TIME PICKER USING HTML ====================
+    # ==================== SLOT-MACHINE STYLE TIME PICKER ====================
     st.subheader("Select Start Time (12-Hour Scroll)")
 
-    # HTML5 input type="time" with 12-hour display requires 'step' for minute increments
     time_html = f"""
-    <input id="appt_time" type="time" step="60" style="width:150px; height:40px; font-size:20px;">
+    <input id="appt_time" type="time" step="60" 
+           style="
+               width:150px; 
+               height:40px; 
+               font-size:20px; 
+               background-color:#444; 
+               color:white; 
+               border:none; 
+               border-radius:5px;
+               text-align:center;
+           ">
     <script>
     const timeInput = document.getElementById("appt_time");
-    timeInput.value = "13:00";
+    timeInput.value = "{st.session_state.appt_time_str}";
     function sendTime() {{
         const val = timeInput.value;
         window.parent.postMessage({{type: 'time', value: val}}, "*");
@@ -104,11 +116,7 @@ with st.form("booking_form"):
     """
     components.html(time_html, height=70)
 
-    # Receive value via st.session_state using a placeholder
-    if "appt_time_str" not in st.session_state:
-        st.session_state.appt_time_str = "13:00"  # default 1:00 PM
-
-    # Convert 24-hour HTML value to datetime.time in 12-hour format
+    # Convert HTML time input (24-hour) to datetime.time
     try:
         appt_time_24 = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
         appt_time = appt_time_24
