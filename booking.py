@@ -1,5 +1,5 @@
-# ==================== CASHIN INK — BOOKING APP (12-HOUR SCROLL PICKER, GREY BACKGROUND) ====================
-# VERSION: SLOT-MACHINE-12H-GREY-V1
+# ==================== CASHIN INK — BOOKING APP (12-HOUR SCROLL PICKER + Apple Calendar) ====================
+# VERSION: SLOT-MACHINE-12H-CALENDAR-V1
 
 import streamlit as st
 import sqlite3
@@ -9,10 +9,12 @@ from datetime import datetime, timedelta
 import uuid
 import pytz
 import streamlit.components.v1 as components
+import caldav
+from caldav.elements import dav
 
 # ==================== PAGE CONFIG ====================
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
-st.warning("RUNNING VERSION: SLOT-MACHINE-12H-GREY-V1")
+st.warning("RUNNING VERSION: SLOT-MACHINE-12H-CALENDAR-V1")
 
 # ==================== CONFIG ====================
 DB_PATH = os.path.join(os.getcwd(), "bookings.db")
@@ -25,6 +27,36 @@ stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY")
 SUCCESS_URL = st.secrets.get("STRIPE_SUCCESS_URL", "https://your-app.streamlit.app/")
 CANCEL_URL  = st.secrets.get("STRIPE_CANCEL_URL",  "https://your-app.streamlit.app/")
 ORGANIZER_EMAIL = st.secrets.get("ORGANIZER_EMAIL", "julio@cashinink.com")
+
+# ==================== APPLE CALENDAR CONFIG (Julio) ====================
+ICLOUD_USER = st.secrets["icloud"]["username"]
+ICLOUD_PASS = st.secrets["icloud"]["app_password"]
+
+# Connect to Julio's iCloud calendar
+cal_client = caldav.DAVClient(
+    url="https://caldav.icloud.com/",
+    username=ICLOUD_USER,
+    password=ICLOUD_PASS
+)
+principal = cal_client.principal()
+JULIO_CALENDAR = principal.calendars()[0]  # default calendar
+
+def create_apple_event(name, description, start_dt, end_dt):
+    """Add event to Julio's Apple Calendar via CalDAV"""
+    start_utc = start_dt.astimezone(pytz.UTC)
+    end_utc = end_dt.astimezone(pytz.UTC)
+    event_data = f"""
+    BEGIN:VCALENDAR
+    VERSION:2.0
+    BEGIN:VEVENT
+    SUMMARY:Tattoo Appointment - {name}
+    DESCRIPTION:{description}
+    DTSTART:{start_utc.strftime('%Y%m%dT%H%M%SZ')}
+    DTEND:{end_utc.strftime('%Y%m%dT%H%M%SZ')}
+    END:VEVENT
+    END:VCALENDAR
+    """
+    JULIO_CALENDAR.add_event(event_data)
 
 # ==================== DATABASE ====================
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -91,7 +123,6 @@ with st.form("booking_form"):
 
     # ==================== SLOT-MACHINE STYLE TIME PICKER ====================
     st.subheader("Select Start Time (12-Hour Scroll)")
-
     time_html = f"""
     <input id="appt_time" type="time" step="60" 
            style="
@@ -116,7 +147,6 @@ with st.form("booking_form"):
     """
     components.html(time_html, height=70)
 
-    # Convert HTML time input (24-hour) to datetime.time
     try:
         appt_time_24 = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
         appt_time = appt_time_24
@@ -141,7 +171,7 @@ with st.form("booking_form"):
             utc_start = local_start.astimezone(pytz.UTC)
             utc_end = local_end.astimezone(pytz.UTC)
 
-            # ==================== SLOT CONFLICT CHECK ====================
+            # Check for booking conflicts
             if c.execute(
                 "SELECT 1 FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
                 (utc_end.isoformat(), utc_start.isoformat())
@@ -196,15 +226,25 @@ for row in c.execute("SELECT name,date,time,deposit_paid FROM bookings ORDER BY 
     color = "#00C853" if paid else "#FF0000"
     st.markdown(f"**{name}** — {date} at **{time}** — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
 
-# ==================== SUCCESS PAGE ====================
+# ==================== SUCCESS PAGE & APPLE CALENDAR INTEGRATION ====================
 if st.query_params.get("booking_id"):
     bid = st.query_params["booking_id"]
-    row = c.execute("SELECT name,time FROM bookings WHERE id=?", (bid,)).fetchone()
+    row = c.execute("SELECT name, description, start_dt, end_dt FROM bookings WHERE id=?", (bid,)).fetchone()
     if row:
-        name, time = row
+        name, description, start_iso, end_iso = row
         c.execute("UPDATE bookings SET deposit_paid=1 WHERE id=?", (bid,))
         conn.commit()
-        st.balloons()
-        st.success(f"DEPOSIT CONFIRMED — Appointment at {time}")
+
+        # Convert to datetime objects
+        local_start = datetime.fromisoformat(start_iso).astimezone(STUDIO_TZ)
+        local_end = datetime.fromisoformat(end_iso).astimezone(STUDIO_TZ)
+
+        # Add event to Julio's Apple Calendar
+        try:
+            create_apple_event(name, description, local_start, local_end)
+            st.success(f"DEPOSIT CONFIRMED — Appointment added to Apple Calendar")
+            st.balloons()
+        except Exception as e:
+            st.error(f"Payment confirmed but failed to add to Apple Calendar: {e}")
 
 st.caption("© 2025 Cashin Ink — Miami, FL")
