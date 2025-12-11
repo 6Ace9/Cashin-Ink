@@ -1,5 +1,5 @@
-# ==================== CASHIN INK — BOOKING APP (12-HOUR SLOT PICKER) ====================
-# VERSION: FIXED-12H-SLOT-PICKER-V1
+# ==================== CASHIN INK — BOOKING APP (12-HOUR SCROLL PICKER) ====================
+# VERSION: SLOT-MACHINE-12H-COMPONENT-V1
 
 import streamlit as st
 import sqlite3
@@ -8,12 +8,11 @@ import stripe
 from datetime import datetime, timedelta
 import uuid
 import pytz
+import streamlit.components.v1 as components
 
-# ==================== PAGE CONFIG MUST BE FIRST ====================
+# ==================== PAGE CONFIG ====================
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
-
-# ==================== VERSION BANNER ====================
-st.warning("RUNNING VERSION: FIXED-12H-SLOT-PICKER-V1")
+st.warning("RUNNING VERSION: SLOT-MACHINE-12H-COMPONENT-V1")
 
 # ==================== CONFIG ====================
 DB_PATH = os.path.join(os.getcwd(), "bookings.db")
@@ -24,7 +23,7 @@ STUDIO_TZ = pytz.timezone("America/New_York")
 
 stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY")
 SUCCESS_URL = st.secrets.get("STRIPE_SUCCESS_URL", "https://your-app.streamlit.app/")
-CANCEL_URL  = st.secrets.get("STRIPE_CANCEL_URL",  "https://your-app.streamlit.app/")
+CANCEL_URL  = st.secrets.get("STRIPE_CANCEL_URL", "https://your-app.streamlit.app/")
 ORGANIZER_EMAIL = st.secrets.get("ORGANIZER_EMAIL", "julio@cashinink.com")
 
 # ==================== DATABASE ====================
@@ -87,22 +86,36 @@ with st.form("booking_form"):
 
     appt_date = st.date_input("Choose Date*", min_value=datetime.today() + timedelta(days=1))
 
-    # ==================== SLOT-MACHINE STYLE TIME PICKER ====================
-    st.subheader("Select Start Time")
+    # ==================== SLOT-MACHINE STYLE TIME PICKER USING HTML ====================
+    st.subheader("Select Start Time (12-Hour Scroll)")
 
-    hours = [str(h) for h in range(1, 13)]
-    minutes = [f"{m:02d}" for m in range(0, 60)]
-    ampm = ["AM", "PM"]
+    # HTML5 input type="time" with 12-hour display requires 'step' for minute increments
+    time_html = f"""
+    <input id="appt_time" type="time" step="60" style="width:150px; height:40px; font-size:20px;">
+    <script>
+    const timeInput = document.getElementById("appt_time");
+    timeInput.value = "13:00";
+    function sendTime() {{
+        const val = timeInput.value;
+        window.parent.postMessage({{type: 'time', value: val}}, "*");
+    }}
+    timeInput.addEventListener('change', sendTime);
+    </script>
+    """
+    components.html(time_html, height=70)
 
-    col_hour, col_minute, col_ampm = st.columns([1,1,1])
-    with col_hour:
-        selected_hour = st.selectbox("Hour", hours)
-    with col_minute:
-        selected_minute = st.selectbox("Minute", minutes)
-    with col_ampm:
-        selected_ampm = st.selectbox("AM/PM", ampm)
+    # Receive value via st.session_state using a placeholder
+    if "appt_time_str" not in st.session_state:
+        st.session_state.appt_time_str = "13:00"  # default 1:00 PM
 
-    appt_time = datetime.strptime(f"{selected_hour}:{selected_minute} {selected_ampm}", "%I:%M %p").time()
+    # Convert 24-hour HTML value to datetime.time in 12-hour format
+    try:
+        appt_time_24 = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+        appt_time = appt_time_24
+        display_time = appt_time.strftime("%I:%M %p").lstrip("0")
+    except:
+        appt_time = datetime.strptime("13:00", "%H:%M").time()
+        display_time = "1:00 PM"
 
     agree = st.checkbox("I agree to the $150 non-refundable deposit")
     submit = st.form_submit_button("Pay Deposit → Lock My Spot")
@@ -139,9 +152,7 @@ with st.form("booking_form"):
                     out.write(f.getbuffer())
                 saved_files.append(path)
 
-            display_time = appt_time.strftime("%I:%M %p").lstrip("0")
-
-            # ==================== STRIPE CHECKOUT ====================
+            # Stripe checkout
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[{
