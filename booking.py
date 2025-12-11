@@ -1,5 +1,5 @@
-# ==================== CASHIN INK — BOOKING APP (12-HOUR SINGLE DROPDOWN) ====================
-# VERSION: FIXED-12H-SINGLE-DROPDOWN-V1
+# ==================== CASHIN INK — BOOKING APP (12-HOUR SLOT PICKER) ====================
+# VERSION: FIXED-12H-SLOT-PICKER-V1
 
 import streamlit as st
 import sqlite3
@@ -13,7 +13,7 @@ import pytz
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
 # ==================== VERSION BANNER ====================
-st.warning("RUNNING VERSION: FIXED-12H-SINGLE-DROPDOWN-V1")
+st.warning("RUNNING VERSION: FIXED-12H-SLOT-PICKER-V1")
 
 # ==================== CONFIG ====================
 DB_PATH = os.path.join(os.getcwd(), "bookings.db")
@@ -87,20 +87,22 @@ with st.form("booking_form"):
 
     appt_date = st.date_input("Choose Date*", min_value=datetime.today() + timedelta(days=1))
 
-    # ==================== SINGLE DROPDOWN 12-HOUR TIME SELECTION ====================
-    st.subheader("Start Time")
-    # Studio hours: 12 PM to 8 PM
-    available_hours = range(12, 21)  # 12 PM to 8 PM
-    minutes = [0, 30]
+    # ==================== SLOT-MACHINE STYLE TIME PICKER ====================
+    st.subheader("Select Start Time")
 
-    time_options = []
-    for h in available_hours:
-        for m in minutes:
-            dt = datetime.strptime(f"{h}:{m:02d}", "%H:%M")
-            time_options.append(dt.strftime("%I:%M %p").lstrip("0"))
+    hours = [str(h) for h in range(1, 13)]
+    minutes = [f"{m:02d}" for m in range(0, 60)]
+    ampm = ["AM", "PM"]
 
-    selected_time_str = st.selectbox("Select Time", time_options)
-    appt_time = datetime.strptime(selected_time_str, "%I:%M %p").time()
+    col_hour, col_minute, col_ampm = st.columns([1,1,1])
+    with col_hour:
+        selected_hour = st.selectbox("Hour", hours)
+    with col_minute:
+        selected_minute = st.selectbox("Minute", minutes)
+    with col_ampm:
+        selected_ampm = st.selectbox("AM/PM", ampm)
+
+    appt_time = datetime.strptime(f"{selected_hour}:{selected_minute} {selected_ampm}", "%I:%M %p").time()
 
     agree = st.checkbox("I agree to the $150 non-refundable deposit")
     submit = st.form_submit_button("Pay Deposit → Lock My Spot")
@@ -118,9 +120,11 @@ with st.form("booking_form"):
             utc_start = local_start.astimezone(pytz.UTC)
             utc_end = local_end.astimezone(pytz.UTC)
 
-            # Check slot conflict
-            if c.execute("SELECT 1 FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
-                         (utc_end.isoformat(), utc_start.isoformat())).fetchone():
+            # ==================== SLOT CONFLICT CHECK ====================
+            if c.execute(
+                "SELECT 1 FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
+                (utc_end.isoformat(), utc_start.isoformat())
+            ).fetchone():
                 st.error("Slot just taken — pick another time!")
                 st.stop()
 
@@ -137,7 +141,7 @@ with st.form("booking_form"):
 
             display_time = appt_time.strftime("%I:%M %p").lstrip("0")
 
-            # Stripe checkout
+            # ==================== STRIPE CHECKOUT ====================
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
                 line_items=[{
