@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 import uuid
 import pytz
 
+# ==================== PAGE CONFIG MUST BE FIRST ====================
+st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
+
 # ==================== VERSION DISPLAY (PROOF YOU ARE RUNNING THIS FILE) ====================
 st.warning("RUNNING VERSION: CLEAN-12H-V1")
 
@@ -48,7 +51,7 @@ c.execute('''
 conn.commit()
 
 # ==================== HEADER ====================
-st.set_page_config(page_title="Cashin Ink", layout="centered")
+
 st.markdown("""
 <style>
     .stApp { background:#000; color:#fff; }
