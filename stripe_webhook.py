@@ -1,102 +1,80 @@
-# stripe_webhook.py
-import os
-import json
-import sqlite3
-from datetime import datetime
-import pytz
-import stripe
-from flask import Flask, request, jsonify
-import caldav
-from caldav.elements import dav
+# webhook.py — DEPLOY THIS ON RAILWAY (or Render/Fly.io)
+# This file does ALL the magic: marks paid + adds to Apple Calendar instantly
 
-# ==================== CONFIG ====================
-DB_PATH = "bookings.db"
+from flask import Flask, request, jsonify
+import stripe
+import sqlite3
+import os
+import pytz
+from datetime import datetime
+import caldav
+
+app = Flask(__name__)
+
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
+
+DB_PATH = "bookings.db"  # Will be mounted as volume in Railway
 STUDIO_TZ = pytz.timezone("America/New_York")
 
-# Stripe webhook secret (set in your Stripe dashboard)
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
-
-# Apple Calendar credentials (Julio)
-ICLOUD_USER = os.environ.get("ICLOUD_USER")
-ICLOUD_PASS = os.environ.get("ICLOUD_PASS")
-
-# Connect to Apple Calendar
-cal_client = caldav.DAVClient(
-    url="https://caldav.icloud.com/",
-    username=ICLOUD_USER,
-    password=ICLOUD_PASS
+# Apple Calendar
+client = caldav.DAVClient(
+    url="https://caldav.icloud.com",
+    username=os.environ["ICLOUD_USER"],
+    password=os.environ["ICLOUD_PASS"]  # App-Specific Password
 )
-principal = cal_client.principal()
-JULIO_CALENDAR = principal.calendars()[0]  # default calendar
+calendar = client.principal().calendars()[0]
 
-# Connect to SQLite
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
 
-# ==================== APPLE CALENDAR FUNCTION ====================
-def create_apple_event(name, description, start_dt, end_dt):
-    start_utc = start_dt.astimezone(pytz.UTC)
-    end_utc = end_dt.astimezone(pytz.UTC)
-    event_data = f"""
-    BEGIN:VCALENDAR
-    VERSION:2.0
-    BEGIN:VEVENT
-    SUMMARY:Tattoo Appointment - {name}
-    DESCRIPTION:{description}
-    DTSTART:{start_utc.strftime('%Y%m%dT%H%M%SZ')}
-    DTEND:{end_utc.strftime('%Y%m%dT%H%M%SZ')}
-    END:VEVENT
-    END:VCALENDAR
-    """
-    JULIO_CALENDAR.add_event(event_data)
-
-# ==================== FLASK APP ====================
-app = Flask(__name__)
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+def add_to_calendar(name, desc, start_dt, end_dt):
+    event = f"""
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Tattoo Session - {name}
+DESCRIPTION:{desc}
+DTSTART:{start_dt.astimezone(pytz.UTC).strftime('%Y%m%dT%H%M%SZ')}
+DTEND:{end_dt.astimezone(pytz.UTC).strftime('%Y%m%dT%H%M%SZ')}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR
+ """.strip()
+ calendar.add_event(event)
 
 @app.route("/webhook", methods=["POST"])
-def webhook_received():
+def webhook():
     payload = request.data
-    sig_header = request.headers.get("stripe-signature")
+    sig = request.headers.get("Stripe-Signature")
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
-        )
-    except ValueError as e:
-        # Invalid payload
-        return jsonify(success=False), 400
-    except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
+        event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+    except:
         return jsonify(success=False), 400
 
-    # Handle the checkout.session.completed event
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        booking_id = session["metadata"]["booking_id"]
+        booking_id = session.metadata.get("booking_id")
+        if not booking_id:
+            return jsonify(success=True), 200
 
-        # Mark deposit_paid = 1 in database
-        row = c.execute(
-            "SELECT name, description, start_dt, end_dt FROM bookings WHERE id=?",
-            (booking_id,)
-        ).fetchone()
-
-        if row:
-            name, description, start_iso, end_iso = row
+        row = c.execute("SELECT deposit_paid, name, description, start_dt, end_dt FROM bookings WHERE id=?", (booking_id,)).fetchone()
+        if row and row[0] == 0:
             c.execute("UPDATE bookings SET deposit_paid=1 WHERE id=?", (booking_id,))
             conn.commit()
 
-            # Add to Apple Calendar
+            name, desc, s, e = row[1], row[2], row[3], row[4]
+            start_dt = datetime.fromisoformat(s).astimezone(STUDIO_TZ)
+            end_dt = datetime.fromisoformat(e).astimezone(STUDIO_TZ)
+
             try:
-                local_start = datetime.fromisoformat(start_iso).astimezone(STUDIO_TZ)
-                local_end   = datetime.fromisoformat(end_iso).astimezone(STUDIO_TZ)
-                create_apple_event(name, description, local_start, local_end)
-                print(f"Added booking {name} to Apple Calendar")
+                add_to_calendar(name, desc, start_dt, end_dt)
+                print(f"Added: {name} – {start_dt.strftime('%b %d %I:%M %p')}")
             except Exception as e:
-                print(f"Failed to add booking to Apple Calendar: {e}")
+                print("Calendar failed:", e)
 
     return jsonify(success=True), 200
 
 if __name__ == "__main__":
-    # Run on localhost for testing: curl -X POST http://127.0.0.1:5000/webhook
-    app.run(port=5000)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
