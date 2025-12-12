@@ -34,7 +34,9 @@ st.markdown(f"""
     .block-container {{ padding-bottom: 0px !important; }}
     footer {{ visibility: hidden !important; }}
 </style>
-
+)
+st.markdown(
+    f"""
     <div style="text-align:center; padding:20px 0;">
         {logo_html}
         <h3>LA — Premium Tattoo Studio</h3>
@@ -43,8 +45,7 @@ st.markdown(f"""
     <div class="main" style="text-align:center;">
     """,
     unsafe_allow_html=True
-    
-    )
+)
 
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
