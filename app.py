@@ -1,4 +1,4 @@
-# app.py ← FINAL: ORIGINAL LOOK + NOW WORKS PERFECTLY ON DESKTOP TOO
+# app.py ← FINAL VERSION: Logo visible + Transparent + Works perfectly on mobile & desktop
 import streamlit as st
 import sqlite3
 import os
@@ -12,11 +12,12 @@ import requests
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== IMAGE LOADER (GitHub + Local) ====================
+# ==================== IMAGE LOADER (GitHub RAW + Local) ====================
 def img_b64(path):
     try:
         if path.startswith("http"):
-            data = requests.get(path, timeout=10).content
+            # Use raw GitHub URL → direct image file
+            data = requests.get(path, timeout=15).content
         else:
             if os.path.exists(path):
                 with open(path, "rb") as f:
@@ -24,15 +25,18 @@ def img_b64(path):
             else:
                 return None
         return base64.b64encode(data).decode()
-    except:
+    except Exception as e:
+        st.error(f"Failed to load image: {e}")
         return None
 
-# YOUR GITHUB RAW URLs HERE
-logo_b64 = img_b64("https://github.com/6Ace9/Cashin-Ink/blob/main/logo.png")
-bg_b64   = img_b64("https://github.com/6Ace9/Cashin-Ink/blob/main/background.png")
+# CORRECT RAW GITHUB URLs (this is what makes the logo appear!)
+logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
+bg_b64   = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png")
 
+# Logo HTML with CSS class for transparency fix
 logo_html = (
-    f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">'
+    f'<img src="data:image/png;base64,{logo_b64}" class="transparent-logo" '
+    f'style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">'
     if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
 )
 
@@ -46,9 +50,16 @@ st.markdown(f"""
     .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
-    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
+    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold 20px Arial; border-radius:8px; padding:16px 40px; }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
     footer {{ visibility: hidden !important; }}
+
+    /* THIS REMOVES WHITE BACKGROUND FROM LOGO */
+    .transparent-logo {{
+        background: transparent !important;
+        mix-blend-mode: multiply;     /* Removes pure white, keeps black/green */
+        image-rendering: -webkit-optimize-contrast; /* Sharp on all devices */
+    }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -65,7 +76,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/New_York")
 
 if "STRIPE_SECRET_KEY" not in st.secrets:
-    st.error("Missing STRIPE_SECRET_KEY")
+    st.error("Missing STRIPE_SECRET_KEY in Streamlit secrets")
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
@@ -82,9 +93,12 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 conn.commit()
 
 # Session state
-if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state:
+    st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state:
+    st.session_state.appt_time_str = "13:00"
 
 st.markdown("---")
 st.header("Book Sessions — $150 Deposit")
@@ -101,12 +115,13 @@ with st.form("booking_form"):
 
     description = st.text_area("Tattoo Idea* (size, placement, style)", height=120)
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded: st.session_state.uploaded_files = uploaded
+    if uploaded:
+        st.session_state.uploaded_files = uploaded
 
     st.markdown("### Date & Time")
     dc, tc = st.columns([2,1])
 
-    # DATE PICKER — BIG & BEAUTIFUL (now works on desktop!)
+    # BIG DATE PICKER — Works on desktop & mobile
     with dc:
         st.markdown("**Select Date**")
         components.html(f"""
@@ -119,13 +134,12 @@ with st.form("booking_form"):
         </div>
         <script>
             const dateInput = document.getElementById('datePicker');
-            // Force open picker on click AND remove readonly so desktop works
             dateInput.removeAttribute('readonly');
             dateInput.showPicker && dateInput.addEventListener('click', () => dateInput.showPicker());
         </script>
         """, height=180)
 
-    # TIME PICKER — BIG & BEAUTIFUL (now works on desktop!)
+    # BIG TIME PICKER — Works on desktop & mobile
     with tc:
         st.markdown("**Start Time**")
         components.html(f"""
@@ -141,26 +155,16 @@ with st.form("booking_form"):
         </script>
         """, height=180)
 
-    # Capture values after render
-    appt_date_str = st.session_state.get("appt_date_str", (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d"))
-    appt_time_str = st.session_state.get("appt_time_str", "13:00")
-
-    # Use JavaScript to sync values back to Streamlit session state
+    # Sync picker values back to Streamlit
     components.html(f"""
     <script>
         const dateInput = document.getElementById('datePicker');
         const timeInput = document.getElementById('timePicker');
-
-        dateInput.addEventListener('change', function() {{
-            parent.streamlit.setComponentValue({{date: this.value}});
-        }});
-        timeInput.addEventListener('change', function() {{
-            parent.streamlit.setComponentValue({{time: this.value}});
-        }});
+        dateInput.addEventListener('change', () => parent.streamlit.setComponentValue({{date: dateInput.value}}));
+        timeInput.addEventListener('change', () => parent.streamlit.setComponentValue({{time: timeInput.value}}));
     </script>
     """, height=0)
 
-    # Get updated values from frontend
     picker_value = st.session_state.get("streamlit_component_value", {})
     if isinstance(picker_value, dict):
         if picker_value.get("date"):
@@ -168,19 +172,19 @@ with st.form("booking_form"):
         if picker_value.get("time"):
             st.session_state.appt_time_str = picker_value["time"]
 
-    # Parse final values
+    # Final parsed date/time
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
-        appt_date = datetime.today() + timedelta(days=1)
+        appt_date = (datetime.today() + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
     if appt_date.weekday() == 6:
         st.error("Closed on Sundays")
         st.stop()
     if appt_time.hour < 12 or appt_time.hour > 20:
-        st.error("Open 12 PM – 8 PM only")
+        st.error("Studio open 12 PM – 8 PM only")
         st.stop()
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
@@ -191,7 +195,7 @@ with st.form("booking_form"):
 
     if submit:
         if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Complete all fields & agree")
+            st.error("Please complete all required fields and agree to the deposit")
         else:
             start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
             end_dt = start_dt + timedelta(hours=2)
@@ -202,7 +206,7 @@ with st.form("booking_form"):
             ).fetchone()
 
             if conflict:
-                st.error(f"Slot taken by {conflict[0]}")
+                st.error(f"Slot already booked by {conflict[0]}")
                 st.stop()
 
             bid = str(uuid.uuid4())
@@ -216,7 +220,14 @@ with st.form("booking_form"):
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
-                line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
+                line_items=[{
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {"name": f"Deposit – {name}"},
+                        "unit_amount": 15000
+                    },
+                    "quantity": 1
+                }],
                 mode="payment",
                 success_url=SUCCESS_URL,
                 cancel_url=CANCEL_URL,
@@ -233,17 +244,19 @@ with st.form("booking_form"):
             ))
             conn.commit()
 
-            st.success("Taking you to secure payment…")
+            st.success("Redirecting to secure payment…")
             st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
             st.balloons()
 
-# Success & Admin (unchanged)
+# Payment success message
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
 
+# Admin view
 with st.expander("Studio — Upcoming Bookings"):
-    for row in c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall():
+    bookings = c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall()
+    for row in bookings:
         status = "PAID" if row[4] else "PENDING"
         color = "#00C853" if row[4] else "#FF9800"
         st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
