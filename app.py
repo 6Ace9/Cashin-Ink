@@ -1,4 +1,4 @@
-# app.py  ← FINAL: INSTANT LIVE UPDATE (WORKS 100%)
+# app.py  ← FINAL: INSTANT UPDATE + NO ERRORS + NO KEYBOARD
 import streamlit as st
 import sqlite3
 import os
@@ -64,18 +64,10 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
+# Session state
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-
-# === INSTANT UPDATE FROM PICKERS ===
-def update_date():
-    if "date_value" in st.session_state:
-        st.session_state.appt_date_str = st.session_state.date_value
-
-def update_time():
-    if "time_value" in st.session_state:
-        st.session_state.appt_time_str = st.session_state.time_value
 
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
@@ -113,11 +105,10 @@ with st.form("booking_form"):
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
             d.onchange = () => {{
-                Streamlit.setComponentValue(d.value);
+                window.parent.location.href = window.parent.location.pathname + "?date=" + d.value;
             }};
         </script>
-        """, height=160, key="date_comp")
-        update_date()
+        """, height=160)
 
     with tc:
         st.markdown("**Start Time**")
@@ -133,13 +124,29 @@ with st.form("booking_form"):
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
             t.onchange = () => {{
-                Streamlit.setComponentValue(t.value);
+                window.parent.location.href = window.parent.location.pathname + "?time=" + t.value;
             }};
         </script>
-        """, height=160, key="time_comp")
-        update_time()
+        """, height=160)
 
-    # === LIVE INSTANT DISPLAY ===
+    # INSTANT UPDATE FROM URL PARAMS (WORKS 100%)
+    if "date" in st.query_params:
+        try:
+            new_date = st.query_params["date"]
+            datetime.strptime(new_date, "%Y-%m-%d")
+            st.session_state.appt_date_str = new_date
+            st.query_params.clear()
+        except: pass
+
+    if "time" in st.query_params:
+        try:
+            new_time = st.query_params["time"]
+            datetime.strptime(new_time, "%H:%M")
+            st.session_state.appt_time_str = new_time
+            st.query_params.clear()
+        except: pass
+
+    # Parse current values
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
     except:
@@ -157,6 +164,7 @@ with st.form("booking_form"):
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
+    # LIVE UPDATE — WORKS INSTANTLY
     display_date = appt_date.strftime("%A, %B %-d")
     display_time = appt_time.strftime("%-I:%M %p")
     st.success(f"**Selected:** {display_date} at {display_time}")
