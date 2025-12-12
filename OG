@@ -1,4 +1,4 @@
-# app.py  ← ONLY CENTERED – 100% YOUR WORKING VERSION + CENTER FIX
+# app.py  ← FINAL: NO KEYBOARD ON DATE OR TIME – ONLY NATIVE POPUPS
 import streamlit as st
 import sqlite3
 import os
@@ -39,7 +39,6 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# === 100% YOUR WORKING CODE ===
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -64,7 +63,9 @@ conn.commit()
 
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
+if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
+# Update from URL
 if "appt_time" in st.query_params:
     t = st.query_params["appt_time"]
     if len(t) == 5 and t[2] == ":":
@@ -90,32 +91,74 @@ with st.form("booking_form"):
 
     st.markdown("### Date & Time")
     dc, tc = st.columns([2,1])
+    
     with dc:
-        appt_date = st.date_input(
-            "Date*",
-            min_value=datetime.today() + timedelta(days=1),
-            max_value=datetime.today() + timedelta(days=90)
-        )
+        st.markdown("**Select Date**")
+        # CUSTOM DATE PICKER – NO KEYBOARD, ONLY CALENDAR POPUP
+        components.html(f"""
+        <div style="display:flex;justify-content:center;align-items:center;height:140px;">
+            <input type="date"
+                   value="{st.session_state.appt_date_str}"
+                   min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
+                   max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
+                   readonly
+                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
+                          height:56px;width:220px;font-size:20px;text-align:center;cursor:pointer;"
+                   onclick="this.showPicker?.()">
+        </div>
+        <script>
+            const d = document.querySelector('input[type="date"]');
+            d.onclick = () => d.showPicker?.();
+            d.ontouchstart = () => d.showPicker?.();
+            d.onfocus = () => d.showPicker?.();
+            d.onchange = () => {{
+                parent.window.location.search = "?appt_date=" + d.value;
+            }};
+        </script>
+        """, height=160)
+
+        # Update session state from URL
+        if "appt_date" in st.query_params:
+            new_date = st.query_params["appt_date"]
+            try:
+                datetime.strptime(new_date, "%Y-%m-%d")
+                st.session_state.appt_date_str = new_date
+                appt_date = datetime.strptime(new_date, "%Y-%m-%d").date()
+                st.query_params.clear()
+            except:
+                appt_date = datetime.today() + timedelta(days=1)
+        else:
+            appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
+
         if appt_date.weekday() == 6:
             st.error("Closed on Sundays")
             st.stop()
 
     with tc:
         st.markdown("**Start Time**")
-        # THIS IS THE ONLY LINE CHANGED — PERFECT CENTERING
+        # CUSTOM TIME PICKER – NO KEYBOARD, ONLY WHEEL
         components.html(f"""
-        <div style="display:flex; justify-content:center; align-items:center; height:140px;">
-            <input type="time" value="{st.session_state.appt_time_str}" step="3600" 
-                   style="background:#1e1e1e; color:white; border:2px solid #00C853; border-radius:8px; 
-                          height:50px; width:170px; font-size:20px; text-align:center;">
+        <div style="display:flex;justify-content:center;align-items:center;height:140px;">
+            <input type="time"
+                   value="{st.session_state.appt_time_str}"
+                   step="3600"
+                   readonly
+                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
+                          height:56px;width:180px;font-size:22px;text-align:center;cursor:pointer;"
+                   onclick="this.showPicker?.()">
         </div>
         <script>
-            document.querySelector('input[type="time"]').addEventListener('change', e => {{
-                parent.window.location.search = "?appt_time=" + e.target.value;
-            }});
+            const t = document.querySelector('input[type="time"]');
+            t.onclick = () => t.showPicker?.();
+            t.ontouchstart = () => t.showPicker?.();
+            t.onfocus = () => t.showPicker?.();
+            t.onchange = () => {{
+                parent.window.location.search = "?appt_time=" + t.value;
+            }};
         </script>
-        """, height=150)
+        """, height=160)
 
+    # Parse time
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
