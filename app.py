@@ -1,4 +1,4 @@
-# app.py  ← FINAL: TAPS OPEN CALENDAR (NO KEYBOARD) + CENTERED
+# app.py  ← FINAL: NO KEYBOARD – ONLY NATIVE TIME PICKER POPUP + CENTERED
 import streamlit as st
 import sqlite3
 import os
@@ -102,20 +102,24 @@ with st.form("booking_form"):
 
     with tc:
         st.markdown("**Start Time**")
-        # FINAL: TAPS OPEN CALENDAR WHEEL (NO KEYBOARD) + CENTERED + DARK STYLE
+        # FINAL FIX: NO KEYBOARD – ONLY NATIVE TIME PICKER POPUP (iOS + Android)
         components.html(f"""
         <div style="display:flex; justify-content:center; align-items:center; height:140px;">
             <input type="time" 
                    value="{st.session_state.appt_time_str}" 
                    step="3600"
+                   readonly
                    style="background:#1e1e1e; color:white; border:2px solid #00C853; border-radius:8px; 
                           height:50px; width:170px; font-size:20px; text-align:center;
-                          -webkit-appearance: none; appearance: none;">
+                          -webkit-appearance: none; appearance: none; cursor:pointer;">
         </div>
         <script>
             const input = document.querySelector('input[type="time"]');
+            // Force open native picker on tap (iOS + Android)
+            input.addEventListener('click', () => input.showPicker?.() || input.focus());
+            input.addEventListener('touchstart', () => input.showPicker?.() || input.focus());
             input.addEventListener('focus', () => input.showPicker?.());
-            input.addEventListener('click', () => input.showPicker?.());
+            // Update URL on change
             input.addEventListener('change', () => {{
                 parent.window.location.search = "?appt_time=" + input.value;
             }});
