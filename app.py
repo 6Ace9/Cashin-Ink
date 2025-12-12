@@ -29,7 +29,7 @@ def img_b64(path):
 
 # YOUR GITHUB RAW URLs HERE
 logo_b64 = img_b64("https://github.com/6Ace9/Cashin-Ink/blob/main/logo.png")
-bg_b64   = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
+bg_b64   = img_b64("https://github.com/6Ace9/Cashin-Ink/blob/main/background.png")
 
 logo_html = (
     f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">'
