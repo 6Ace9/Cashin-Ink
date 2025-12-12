@@ -1,4 +1,4 @@
-# app.py  ← Rename your file to app.py (or keep booking.py, doesn't matter)
+# app.py  ← FINAL VERSION – WORKS 100% ON STREAMLIT CLOUD
 import streamlit as st
 import sqlite3
 import os
@@ -9,26 +9,22 @@ import pytz
 import streamlit.components.v1 as components
 import base64
 
-# ============== THIS MUST BE FIRST! ==============
+# MUST BE FIRST
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ============== LOAD IMAGES (100% WORKING) ==============
-def img_to_b64(path):
+# Load images safely
+def img_b64(path):
     if os.path.exists(path):
         with open(path, "rb") as f:
             return base64.b64encode(f.read()).decode()
     return None
 
-logo_b64 = img_to_b64("logo.png")
-bg_b64 = img_to_b64("background.png")
+logo_b64 = img_b64("logo.png")
+bg_b64 = img_b64("background.png")
 
-logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:0 auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">' \
-            if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
+logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">' if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
+bg_css = f"background:linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;" if bg_b64 else "background:#000;"
 
-bg_css = f"background:linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;" \
-         if bg_b64 else "background:#000;"
-
-# ============== FULL CUSTOM STYLE + LOGO ==============
 st.markdown(f"""
 <style>
     .stApp {{ {bg_css} min-height:100vh; }}
@@ -36,29 +32,28 @@ st.markdown(f"""
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:14px 32px; font-size:18px; }}
     input[type="time"] {{ width:100% !important; max-width:170px; height:50px; font-size:20px; text-align:center; background:#111; color:white; border:2px solid #00C853; border-radius:8px; }}
-    .stTextInput input, .stTextArea textarea {{ background:rgba(255,255,255,0.1)!important; color:white!important; border:1px solid #00C853!important; }}
 </style>
 
-<div style="text-align:center;padding:20px 0 10px;">
+<div style="text-align:center;padding:20px 0;">
     {logo_html}
     <h3>Miami — Premium Tattoo Studio</h3>
 </div>
 <div class="main">
 """, unsafe_allow_html=True)
 
-# ============== YOUR FULL ORIGINAL LOGIC BELOW (unchanged) ==============
+# Config
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/New_York")
 
 if "STRIPE_SECRET_KEY" not in st.secrets:
-    st.error("Missing STRIPE_SECRET_KEY in secrets")
+    st.error("Missing STRIPE_SECRET_KEY")
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-SUCCESS_URL = st.secrets.get("STRIPE_SUCCESS_URL", f"{st.secrets.get('BASE_URL', '')}/?success=1")
-CANCEL_URL = st.secrets.get("STRIPE_CANCEL_URL", st.secrets.get("BASE_URL", ""))
+SUCCESS_URL = st.secrets.get("STRIPE_SUCCESS_URL", f"https://{st.secrets.get('STREAMLIT_APP_URL', 'your-app.streamlit.app')}/?success=1")
+CANCEL_URL = st.secrets.get("STRIPE_CANCEL_URL", f"https://{st.secrets.get('STREAMLIT_APP_URL', 'your-app.streamlit.app')}")
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
@@ -72,13 +67,12 @@ conn.commit()
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 
-# Time picker via query param
-qp = st.experimental_get_query_params()
-if "appt_time" in qp:
-    t = qp["appt_time"][0]
+# Fixed query params
+if "appt_time" in st.query_params:
+    t = st.query_params["appt_time"]
     if len(t) == 5 and t[2] == ":":
         st.session_state.appt_time_str = t
-    st.experimental_rerun()
+    st.query_params.clear()  # optional: clean URL
 
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
@@ -100,19 +94,24 @@ with st.form("booking_form"):
     st.markdown("### Date & Time")
     dc, tc = st.columns([2,1])
     with dc:
-        appt_date = st.date_input("Date*", datetime.today()+timedelta(days=1), datetime.today()+timedelta(days=90))
+        # Fixed: use keyword arguments
+        appt_date = st.date_input(
+            "Date*",
+            min_value=datetime.today() + timedelta(days=1),
+            max_value=datetime.today() + timedelta(days=90)
+        )
         if appt_date.weekday() == 6:
             st.error("Closed on Sundays")
             st.stop()
+
     with tc:
         st.markdown("**Start Time**")
         components.html(f"""
         <input type="time" value="{st.session_state.appt_time_str}" step="3600">
         <script>
-            document.querySelector('input[type="time"]').addEventListener('change', e => {{
-                const p = new URLSearchParams(window.location.search);
-                p.set('appt_time', e.target.value);
-                window.location.search = p.toString();
+            const i = document.querySelector('input[type="time"]');
+            i.addEventListener('change', () => {{
+                parent.window.location.search = "?appt_time=" + i.value;
             }});
         </script>
         """, height=70)
@@ -134,7 +133,7 @@ with st.form("booking_form"):
 
     if submit:
         if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Complete all fields & agree")
+            st.error("Complete all fields & agree to deposit")
         else:
             start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
             end_dt = start_dt + timedelta(hours=2)
@@ -171,18 +170,19 @@ with st.form("booking_form"):
             ))
             conn.commit()
 
-            st.success("Redirecting to payment…")
+            st.success("Taking you to secure payment…")
             st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
             st.balloons()
 
-if st.experimental_get_query_params().get("success"):
-    st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
+if st.query_params.get("success"):
+    st.success("Payment confirmed! Your slot is locked.")
     st.balloons()
 
 with st.expander("Studio — Upcoming Bookings"):
     for row in c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall():
-        st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — {'PAID' if row[4] else 'PENDING'}", 
-                    unsafe_allow_html=True)
+        status = "PAID" if row[4] else "PENDING"
+        color = "#00C853" if row[4] else "#FF9800"
+        st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.caption("© 2025 Cashin Ink — Miami, FL")
