@@ -1,4 +1,4 @@
-# app.py  ← FINAL: NO EXTRA SCROLL SPACE + PERFECT FOOTER
+# app.py  ← FINAL: "Selected:" + DATE UNDERNEATH
 import streamlit as st
 import sqlite3
 import os
@@ -31,12 +31,8 @@ st.markdown(f"""
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
-    
-    /* REMOVE ALL EXTRA SPACE BELOW FOOTER */
     .block-container {{ padding-bottom: 0px !important; }}
     footer {{ visibility: hidden !important; }}
-    .css-1d391kg {{ padding-bottom: 0px !important; }}
-    .css-1y0t9lf {{ padding-bottom: 0px !important; }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -150,6 +146,7 @@ with st.form("booking_form"):
         </script>
         """, height=160)
 
+    # Parse time
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
@@ -159,8 +156,17 @@ with st.form("booking_form"):
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
-    display_time = appt_time.strftime("%I:%M %p").lstrip("0")
-    st.success(f"Selected: **{appt_date.strftime('%A, %B %d')} at {display_time}**")
+    # EXACTLY HOW YOU WANT IT
+    display_date = appt_date.strftime("%A, %B %-d")
+    display_time = appt_time.strftime("%-I:%M %p")
+
+    st.markdown("""
+    <div style="text-align:center; background:#00C853; color:black; padding:16px; border-radius:12px; font-size:20px; font-weight:bold; margin:20px 0;">
+        Selected:
+        <br>
+        <span style="font-size:28px;">{date} at {time}</span>
+    </div>
+    """.format(date=display_date, time=display_time), unsafe_allow_html=True)
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -223,7 +229,6 @@ with st.expander("Studio — Upcoming Bookings"):
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# FINAL CLEAN FOOTER – NO EXTRA SPACE
 st.markdown("""
 <div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
     © 2025 Cashin Ink — Miami, FL
