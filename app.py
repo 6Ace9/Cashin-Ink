@@ -70,7 +70,7 @@ if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (da
 
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
-st.info("2-hour session • Deposit locks your slot • Non-refundable")
+st.info("Deposit locks your slot • Non-refundable")
 
 with st.form("booking_form"):
     col1, col2 = st.columns(2)
@@ -143,7 +143,7 @@ with st.form("booking_form"):
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
     st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
-        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
+    submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
