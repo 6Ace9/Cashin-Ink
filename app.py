@@ -1,4 +1,4 @@
-# app.py  ← FINAL: CLEAN & PERFECT — NO SELECTED TEXT
+# app.py  ← FINAL: BUTTON SAYS "Schedule Appointment"
 import streamlit as st
 import sqlite3
 import os
@@ -143,7 +143,7 @@ with st.form("booking_form"):
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
     st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
-    submit = st.form_submit_button("PAY DEPOSIT → LOCK MY SLOT")
+    submit = st.form_submit_button("Schedule Appointment")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
