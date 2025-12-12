@@ -36,10 +36,10 @@ st.markdown(
         footer {{ visibility: hidden !important; }}
     </style>
 
-    <div style="text-align:center; padding20px 0;">
-        {logo_html}
-        <h3>LA - Premium Tattoo Studio</h3>
-    </div>
+        <div style="text-align:center; padding:20px 0;">
+            {logo_html}
+            <h3 style="margin: 15px 0 0 0; font-size: 1.8rem; letter-spacing: 1px;">LA - Premium Tattoo Studio</h3>
+        </div>
 
     <div class="main" style="text-align:center;">
     """,
