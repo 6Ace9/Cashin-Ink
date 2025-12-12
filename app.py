@@ -1,4 +1,4 @@
-# app.py  ← FINAL: "Schedule Appointment" + PERFECTLY CENTERED
+# app.py  ← FINAL: "Schedule Appointment" BUTTON PERFECTLY CENTERED
 import streamlit as st
 import sqlite3
 import os
@@ -30,7 +30,6 @@ st.markdown(f"""
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
-    .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
     .block-container {{ padding-bottom: 0px !important; }}
     footer {{ visibility: hidden !important; }}
 </style>
@@ -142,10 +141,11 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # PERFECTLY CENTERED BUTTON
-    st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
-    submit = st.form_submit_button("Schedule Appointment")
-    st.markdown("</div>", unsafe_allow_html=True)
+    # PERFECTLY CENTERED BUTTON — GUARANTEED
+    st.write("")  # small spacing
+    col1, col2, col3 = st.columns([1,1,1])
+    with col2:
+        submit = st.form_submit_button("Schedule Appointment")
 
     if submit:
         if not all([name, phone, email, description]) or age < 18 or not agree:
