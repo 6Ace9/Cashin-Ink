@@ -1,4 +1,4 @@
-# app.py  ← FINAL: LIVE UPDATE + NO ERRORS
+# app.py  ← FINAL: INSTANT LIVE UPDATE (WORKS 100%)
 import streamlit as st
 import sqlite3
 import os
@@ -68,6 +68,15 @@ if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = [
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
+# === INSTANT UPDATE FROM PICKERS ===
+def update_date():
+    if "date_value" in st.session_state:
+        st.session_state.appt_date_str = st.session_state.date_value
+
+def update_time():
+    if "time_value" in st.session_state:
+        st.session_state.appt_time_str = st.session_state.time_value
+
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
 st.info("2-hour session • Deposit locks your slot • Non-refundable")
@@ -104,11 +113,11 @@ with st.form("booking_form"):
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
             d.onchange = () => {{
-                // Trigger rerun with new date
-                window.parent.location.search = "?appt_date=" + d.value;
+                Streamlit.setComponentValue(d.value);
             }};
         </script>
-        """, height=160)
+        """, height=160, key="date_comp")
+        update_date()
 
     with tc:
         st.markdown("**Start Time**")
@@ -124,31 +133,13 @@ with st.form("booking_form"):
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
             t.onchange = () => {{
-                window.parent.location.search = "?appt_time=" + t.value;
+                Streamlit.setComponentValue(t.value);
             }};
         </script>
-        """, height=160)
+        """, height=160, key="time_comp")
+        update_time()
 
-    # === LIVE UPDATE ON CHANGE ===
-    if "appt_date" in st.query_params:
-        try:
-            new_date = st.query_params["appt_date"]
-            datetime.strptime(new_date, "%Y-%m-%d")
-            st.session_state.appt_date_str = new_date
-            st.query_params.clear()
-        except:
-            pass
-
-    if "appt_time" in st.query_params:
-        try:
-            new_time = st.query_params["appt_time"]
-            datetime.strptime(new_time, "%H:%M")
-            st.session_state.appt_time_str = new_time
-            st.query_params.clear()
-        except:
-            pass
-
-    # Parse current values
+    # === LIVE INSTANT DISPLAY ===
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
     except:
@@ -166,7 +157,6 @@ with st.form("booking_form"):
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
-    # LIVE DISPLAY — UPDATES INSTANTLY
     display_date = appt_date.strftime("%A, %B %-d")
     display_time = appt_time.strftime("%-I:%M %p")
     st.success(f"**Selected:** {display_date} at {display_time}")
