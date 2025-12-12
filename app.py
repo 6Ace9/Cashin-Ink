@@ -1,4 +1,4 @@
-# app.py  ← FINAL: LIVE UPDATE (DATE & TIME CHANGE → TEXT UPDATES INSTANTLY)
+# app.py  ← FINAL: LIVE UPDATE + NO ERRORS
 import streamlit as st
 import sqlite3
 import os
@@ -104,11 +104,11 @@ with st.form("booking_form"):
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
             d.onchange = () => {{
-                // Update session state via Streamlit's magic
-                Streamlit.setComponentValue({{date: d.value}});
+                // Trigger rerun with new date
+                window.parent.location.search = "?appt_date=" + d.value;
             }};
         </script>
-        """, height=160, key="date_picker")
+        """, height=160)
 
     with tc:
         st.markdown("**Start Time**")
@@ -124,19 +124,29 @@ with st.form("booking_form"):
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
             t.onchange = () => {{
-                Streamlit.setComponentValue({{time: t.value}});
+                window.parent.location.search = "?appt_time=" + t.value;
             }};
         </script>
-        """, height=160, key="time_picker")
+        """, height=160)
 
-    # Get values from components
-    date_value = st.session_state.get("date_picker", {}).get("date")
-    time_value = st.session_state.get("time_picker", {}).get("time")
+    # === LIVE UPDATE ON CHANGE ===
+    if "appt_date" in st.query_params:
+        try:
+            new_date = st.query_params["appt_date"]
+            datetime.strptime(new_date, "%Y-%m-%d")
+            st.session_state.appt_date_str = new_date
+            st.query_params.clear()
+        except:
+            pass
 
-    if date_value:
-        st.session_state.appt_date_str = date_value
-    if time_value:
-        st.session_state.appt_time_str = time_value
+    if "appt_time" in st.query_params:
+        try:
+            new_time = st.query_params["appt_time"]
+            datetime.strptime(new_time, "%H:%M")
+            st.session_state.appt_time_str = new_time
+            st.query_params.clear()
+        except:
+            pass
 
     # Parse current values
     try:
@@ -149,7 +159,6 @@ with st.form("booking_form"):
     except:
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    # Validation
     if appt_date.weekday() == 6:
         st.error("Closed on Sundays")
         st.stop()
@@ -157,7 +166,7 @@ with st.form("booking_form"):
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
-    # LIVE UPDATE — THIS CHANGES INSTANTLY
+    # LIVE DISPLAY — UPDATES INSTANTLY
     display_date = appt_date.strftime("%A, %B %-d")
     display_time = appt_time.strftime("%-I:%M %p")
     st.success(f"**Selected:** {display_date} at {display_time}")
