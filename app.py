@@ -143,7 +143,7 @@ with st.form("booking_form"):
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
     st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
-    submit = st.form_submit_button("PAY DEPOSIT  ->  SCHEDULE APPOINTMENT")
+        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
