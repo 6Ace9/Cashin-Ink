@@ -1,4 +1,4 @@
-# app.py ← FINAL VERSION: Logo visible + Transparent + Works perfectly on mobile & desktop
+# app.py ← FINAL FIXED: Fast loading + Perfect background fit + Glowing logo
 import streamlit as st
 import sqlite3
 import os
@@ -12,59 +12,83 @@ import requests
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== IMAGE LOADER (GitHub RAW + Local) ====================
-def img_b64(path):
+# ==================== FAST IMAGE LOADER ====================
+@st.cache_data(ttl=3600)  # Cache images for 1 hour = lightning fast
+def img_b64(url):
     try:
-        if path.startswith("http"):
-            # Use raw GitHub URL → direct image file
-            data = requests.get(path, timeout=15).content
-        else:
-            if os.path.exists(path):
-                with open(path, "rb") as f:
-                    data = f.read()
-            else:
-                return None
-        return base64.b64encode(data).decode()
-    except Exception as e:
-        st.error(f"Failed to load image: {e}")
+        response = requests.get(url, timeout=10)
+        return base64.b64encode(response.content).decode()
+    except:
         return None
 
-# CORRECT RAW GITHUB URLs (this is what makes the logo appear!)
+# RAW URLs — these load instantly
 logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
 bg_b64   = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png")
 
-# Logo HTML with CSS class for transparency fix
-logo_html = (
-    f'<img src="data:image/png;base64,{logo_b64}" class="transparent-logo" '
-    f'style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">'
-    if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
-)
+# FORCE PERFECT BACKGROUND FIT + FAST LOAD
+bg_css = f"""
+    background: linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.88)),
+                url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;
+    background-attachment: fixed;
+    image-rendering: -webkit-optimize-contrast;
+""" if bg_b64 else "background:#000;"
 
-bg_css = (
-    f"background:linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;"
-    if bg_b64 else "background:#000;"
-)
+# LOGO WITH STRONGER NEON GREEN GLOW
+logo_html = f"""
+<img src="data:image/png;base64,{logo_b64}" class="glowing-logo"
+     style="display:block;margin:30px auto;width:380px;
+            filter: drop-shadow(0 0 30px #00ff00) drop-shadow(0 0 60px #00C853);
+            animation: pulse 4s infinite;">
+""" if logo_b64 else "<h1 style='color:#00C853;text-align:center; text-shadow: 0 0 30px #00ff00;'>CASHIN INK</h1>"
 
 st.markdown(f"""
 <style>
-    .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
-    .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
-    h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
-    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold 20px Arial; border-radius:8px; padding:16px 40px; }}
+    .stApp {{
+        {bg_css}
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+    }}
+    .main {{
+        background: rgba(0,0,0,0.6);
+        padding: 30px;
+        border-radius: 18px;
+        max-width: 900px;
+        margin: 20px auto;
+        border: 1px solid #00C85350;
+        backdrop-filter: blur(8px);
+    }}
+    h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; text-shadow: 0 0 20px #00ff00; }}
+    .stButton>button {{
+        background: linear-gradient(45deg, #00C853, #64dd17) !important;
+        color: black !important;
+        font-weight: bold;
+        border-radius: 12px;
+        padding: 18px 50px;
+        font-size: 22px;
+        border: none;
+        box-shadow: 0 0 20px #00ff0030;
+    }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
     footer {{ visibility: hidden !important; }}
 
-    /* THIS REMOVES WHITE BACKGROUND FROM LOGO */
-    .transparent-logo {{
+    /* STRONG NEON GLOW LOGO */
+    .glowing-logo {{
         background: transparent !important;
-        mix-blend-mode: multiply;     /* Removes pure white, keeps black/green */
-        image-rendering: -webkit-optimize-contrast; /* Sharp on all devices */
+        mix-blend-mode: screen;
+        animation: pulse 4s infinite alternate;
+    }}
+    @keyframes pulse {{
+        from {{ filter: drop-shadow(0 0 30px #00ff00); }}
+        to   {{ filter: drop-shadow(0 0 50px #00ff00) drop-shadow(0 0 80px #00C853); }}
     }}
 </style>
 
-<div style="text-align:center;padding:20px 0;">
+<div style="text-align:center; padding:20px 0;">
     {logo_html}
-    <h3>LA — Premium Tattoo Studio</h3>
+    <h3 style="margin-top:-10px; color:#00ff88; text-shadow:0 0 20px #00ff00;">
+        LA — Premium Tattoo Studio
+    </h3>
 </div>
 <div class="main">
 """, unsafe_allow_html=True)
@@ -76,7 +100,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/New_York")
 
 if "STRIPE_SECRET_KEY" not in st.secrets:
-    st.error("Missing STRIPE_SECRET_KEY in Streamlit secrets")
+    st.error("Missing STRIPE_SECRET_KEY")
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
@@ -93,86 +117,76 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 conn.commit()
 
 # Session state
-if "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state:
-    st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state:
-    st.session_state.appt_time_str = "13:00"
+if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 
 st.markdown("---")
-st.header("Book Sessions — $150 Deposit")
-st.info("Lock your slot • Non-refundable")
+st.header("Book Your Session — $150 Deposit")
+st.info("Lock your slot • Non-refundable • Confirmed instantly")
 
 with st.form("booking_form"):
     col1, col2 = st.columns(2)
     with col1:
         name = st.text_input("Full Name*", placeholder="John Doe")
-        phone = st.text_input("Phone*", placeholder="(305) 555-1234")
+        phone = st.text_input("Phone*", placeholder="(213) 555-0198")
     with col2:
         age = st.number_input("Age*", 18, 100, 25)
         email = st.text_input("Email*", placeholder="you@gmail.com")
 
-    description = st.text_area("Tattoo Idea* (size, placement, style)", height=120)
+    description = st.text_area("Tattoo Idea* (size, placement, style, refs)", height=120)
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded:
-        st.session_state.uploaded_files = uploaded
+    if uploaded: st.session_state.uploaded_files = uploaded
 
-    st.markdown("### Date & Time")
+    st.markdown("### Select Date & Time")
     dc, tc = st.columns([2,1])
 
-    # BIG DATE PICKER — Works on desktop & mobile
     with dc:
-        st.markdown("**Select Date**")
+        st.markdown("**Date**")
         components.html(f"""
-        <div style="display:flex;justify-content:center;align-items:center;height:140px;">
-            <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
-                   min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
-                   max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
-                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
-                          height:56px;width:220px;font-size:20px;text-align:center;">
+        <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
+               min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
+               max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
+               style="background:#111;color:#fff;border:2px solid #00C853;border-radius:10px;
+                      height:60px;width:240px;font-size:22px;text-align:center;">
         </div>
         <script>
-            const dateInput = document.getElementById('datePicker');
-            dateInput.removeAttribute('readonly');
-            dateInput.showPicker && dateInput.addEventListener('click', () => dateInput.showPicker());
+            const d = document.getElementById('datePicker');
+            d.removeAttribute('readonly');
+            d.showPicker && d.addEventListener('click', () => d.showPicker());
         </script>
         """, height=180)
 
-    # BIG TIME PICKER — Works on desktop & mobile
     with tc:
         st.markdown("**Start Time**")
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
             <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600"
-                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
-                          height:56px;width:180px;font-size:22px;text-align:center;">
+                   style="background:#111;color:#fff;border:2px solid #00C853;border-radius:10px;
+                          height:60px;width:200px;font-size:24px;text-align:center;">
         </div>
         <script>
-            const timeInput = document.getElementById('timePicker');
-            timeInput.removeAttribute('readonly');
-            timeInput.showPicker && timeInput.addEventListener('click', () => timeInput.showPicker());
+            const t = document.getElementById('timePicker');
+            t.removeAttribute('readonly');
+            t.showPicker && t.addEventListener('click', () => t.showPicker());
         </script>
         """, height=180)
 
-    # Sync picker values back to Streamlit
-    components.html(f"""
+    # Sync values
+    components.html("""
     <script>
-        const dateInput = document.getElementById('datePicker');
-        const timeInput = document.getElementById('timePicker');
-        dateInput.addEventListener('change', () => parent.streamlit.setComponentValue({{date: dateInput.value}}));
-        timeInput.addEventListener('change', () => parent.streamlit.setComponentValue({{time: timeInput.value}}));
+        document.getElementById('datePicker').addEventListener('change', () => 
+            parent.streamlit.setComponentValue({date: this.value}));
+        document.getElementById('timePicker').addEventListener('change', () => 
+            parent.streamlit.setComponentValue({time: this.value}));
     </script>
     """, height=0)
 
-    picker_value = st.session_state.get("streamlit_component_value", {})
-    if isinstance(picker_value, dict):
-        if picker_value.get("date"):
-            st.session_state.appt_date_str = picker_value["date"]
-        if picker_value.get("time"):
-            st.session_state.appt_time_str = picker_value["time"]
+    val = st.session_state.get("streamlit_component_value", {})
+    if isinstance(val, dict):
+        if val.get("date"): st.session_state.appt_date_str = val["date"]
+        if val.get("time"): st.session_state.appt_time_str = val["time"]
 
-    # Final parsed date/time
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
@@ -184,50 +198,37 @@ with st.form("booking_form"):
         st.error("Closed on Sundays")
         st.stop()
     if appt_time.hour < 12 or appt_time.hour > 20:
-        st.error("Studio open 12 PM – 8 PM only")
+        st.error("Open 12:00 PM – 8:00 PM only")
         st.stop()
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
     st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
-    submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
+    submit = st.form_submit_button("PAY $150 DEPOSIT → BOOK NOW")
     st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Please complete all required fields and agree to the deposit")
+            st.error("Please fill all fields and agree to deposit")
         else:
             start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
             end_dt = start_dt + timedelta(hours=2)
 
-            conflict = c.execute(
-                "SELECT name FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
-                (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())
-            ).fetchone()
-
+            conflict = c.execute("SELECT name FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
+                               (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())).fetchone()
             if conflict:
-                st.error(f"Slot already booked by {conflict[0]}")
+                st.error(f"Slot taken by {conflict[0]}")
                 st.stop()
 
             bid = str(uuid.uuid4())
             os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
-            paths = []
-            for f in st.session_state.uploaded_files:
-                p = f"{UPLOAD_DIR}/{bid}/{f.name}"
-                with open(p, "wb") as out:
-                    out.write(f.getbuffer())
-                paths.append(p)
+            paths = [f"{UPLOAD_DIR}/{bid}/{f.name}" for f in st.session_state.uploaded_files]
+            for f, p in zip(st.session_state.uploaded_files, paths):
+                with open(p, "wb") as out: out.write(f.getbuffer())
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {"name": f"Deposit – {name}"},
-                        "unit_amount": 15000
-                    },
-                    "quantity": 1
-                }],
+                line_items=[{"price_data": {"currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000}, "quantity": 1}],
                 mode="payment",
                 success_url=SUCCESS_URL,
                 cancel_url=CANCEL_URL,
@@ -237,33 +238,28 @@ with st.form("booking_form"):
 
             c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
                 bid, name, age, phone, email, description, str(appt_date),
-                appt_time.strftime("%-I:%M %p"),
-                start_dt.astimezone(pytz.UTC).isoformat(),
-                end_dt.astimezone(pytz.UTC).isoformat(),
-                0, session.id, ",".join(paths), datetime.utcnow().isoformat()
+                appt_time.strftime("%-I:%M %p"), start_dt.astimezone(pytz.UTC).isoformat(),
+                end_dt.astimezone(pytz.UTC).isoformat(), 0, session.id, ",".join(paths), datetime.utcnow().isoformat()
             ))
             conn.commit()
 
-            st.success("Redirecting to secure payment…")
+            st.success("Taking you to secure checkout…")
             st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
             st.balloons()
 
-# Payment success message
 if st.query_params.get("success"):
-    st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
+    st.success("Payment Successful! Your appointment is confirmed. We'll text/call you soon!")
     st.balloons()
 
-# Admin view
-with st.expander("Studio — Upcoming Bookings"):
-    bookings = c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall()
-    for row in bookings:
+with st.expander("Studio — Upcoming Bookings (Admin View)"):
+    for row in c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time"):
         status = "PAID" if row[4] else "PENDING"
-        color = "#00C853" if row[4] else "#FF9800"
+        color = "#00ff00" if row[4] else "#ff9800"
         st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
-<div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
-    © 2025 Cashin Ink — Covina, CA
+<div style="text-align:center;padding:40px 0 20px;color:#00ff88;font-size:15px;text-shadow:0 0 10px #00ff00;">
+    © 2025 Cashin Ink — Covina, CA • By Appointment Only
 </div>
 """, unsafe_allow_html=True)
