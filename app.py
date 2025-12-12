@@ -28,7 +28,7 @@ def img_b64(path):
         return None
 
 # YOUR GITHUB RAW URLs HERE
-logo_b64 = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/logo.png")
+logo_b64 = img_b64("https://github.com/6Ace9/Cashin-Ink/blob/main/logo.png")
 bg_b64   = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
 
 logo_html = (
