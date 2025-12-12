@@ -37,7 +37,7 @@ st.markdown(f"""
 
 <div style="text-align:center;padding:20px 0;">
     {logo_html}
-    <h3>Miami — Premium Tattoo Studio</h3>
+    <h3>LA — Premium Tattoo Studio</h3>
 </div>
 <div class="main">
 """, unsafe_allow_html=True)
@@ -69,8 +69,8 @@ if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
 st.markdown("---")
-st.header("Book Your Session — $150 Deposit")
-st.info("Deposit locks your slot • Non-refundable")
+st.header("Book Sessions — $150 Deposit")
+st.info("Lock your slot • Non-refundable")
 
 with st.form("booking_form"):
     col1, col2 = st.columns(2)
