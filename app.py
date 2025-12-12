@@ -1,4 +1,4 @@
-# app.py  ← FINAL: PERFECT DATE/TIME DISPLAY + NO EXTRA SCROLL
+# app.py  ← FINAL: NO EXTRA SCROLL SPACE + PERFECT FOOTER
 import streamlit as st
 import sqlite3
 import os
@@ -31,8 +31,12 @@ st.markdown(f"""
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
+    
+    /* REMOVE ALL EXTRA SPACE BELOW FOOTER */
     .block-container {{ padding-bottom: 0px !important; }}
     footer {{ visibility: hidden !important; }}
+    .css-1d391kg {{ padding-bottom: 0px !important; }}
+    .css-1y0t9lf {{ padding-bottom: 0px !important; }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -68,7 +72,6 @@ if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = [
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-# Update from URL
 if "appt_time" in st.query_params:
     t = st.query_params["appt_time"]
     if len(t) == 5 and t[2] == ":":
@@ -147,7 +150,6 @@ with st.form("booking_form"):
         </script>
         """, height=160)
 
-    # Parse time
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
@@ -157,10 +159,8 @@ with st.form("booking_form"):
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
-    # PERFECT DISPLAY FORMAT: Saturday, December 13 at 1:00 PM
-    display_date = appt_date.strftime("%A, %B %-d")
-    display_time = appt_time.strftime("%-I:%M %p").lstrip("0")
-    st.success(f"**Selected: {display_date} at {display_time}**")
+    display_time = appt_time.strftime("%I:%M %p").lstrip("0")
+    st.success(f"Selected: **{appt_date.strftime('%A, %B %d')} at {display_time}**")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -223,6 +223,7 @@ with st.expander("Studio — Upcoming Bookings"):
 
 st.markdown("</div>", unsafe_allow_html=True)
 
+# FINAL CLEAN FOOTER – NO EXTRA SPACE
 st.markdown("""
 <div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
     © 2025 Cashin Ink — Miami, FL
