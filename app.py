@@ -39,7 +39,7 @@ st.markdown(
     f"""
     <div style="text-align:center; padding:20px 0;">
         {logo_html}
-        <h3>LA — Premium Tattoo Studio</h3>
+        <h3>LA Premium Tattoo Studio</h3>
     </div>
 
     <div class="main" style="text-align:center;">
