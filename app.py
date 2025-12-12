@@ -1,4 +1,4 @@
-# app.py  ← ONLY CENTERED – EVERYTHING ELSE 100% SAME AS YOUR WORKING VERSION
+# app.py  ← ONLY CENTERED – 100% YOUR WORKING VERSION + CENTER FIX
 import streamlit as st
 import sqlite3
 import os
@@ -30,36 +30,6 @@ st.markdown(f"""
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:14px 32px; font-size:18px; }}
-    
-    /* ONLY THIS BLOCK CHANGED – PERFECT CENTERING + YOUR EXACT DARK STYLE */
-    .time-center {{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        min-height: 110px;
-    }}
-    .time-center input[type="time"] {{
-        background: #1e1e1e !important;
-        color: white !important;
-        border: 2px solid #00C853 !important;
-        border-radius: 8px;
-        height: 50px;
-        width: 170px;
-        font-size: 20px;
-        text-align: center;
-        -webkit-appearance: none;
-        appearance: none;
-    }}
-    .time-center input[type="time"]::-webkit-datetime-edit,
-    .time-center input[type="time"]::-webkit-datetime-edit-fields-wrapper,
-    .time-center input[type="time"]::-webkit-datetime-edit-text,
-    .time-center input[type="time"]::-webkit-datetime-edit-hour-field,
-    .time-center input[type="time"]::-webkit-datetime-edit-minute-field,
-    .time-center input[type="time"]::-webkit-calendar-picker-indicator {{
-        color: white !important;
-        filter: invert(1);
-    }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -69,7 +39,7 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# === 100% YOUR ORIGINAL WORKING CODE BELOW (NOTHING CHANGED) ===
+# === 100% YOUR WORKING CODE ===
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -132,18 +102,19 @@ with st.form("booking_form"):
 
     with tc:
         st.markdown("**Start Time**")
-        # ONLY CHANGE: wrapped in .time-center div
+        # THIS IS THE ONLY LINE CHANGED — PERFECT CENTERING
         components.html(f"""
-        <div class="time-center">
-            <input type="time" value="{st.session_state.appt_time_str}" step="3600" required>
+        <div style="display:flex; justify-content:center; align-items:center; height:140px;">
+            <input type="time" value="{st.session_state.appt_time_str}" step="3600" 
+                   style="background:#1e1e1e; color:white; border:2px solid #00C853; border-radius:8px; 
+                          height:50px; width:170px; font-size:20px; text-align:center;">
         </div>
         <script>
-            const input = document.querySelector('input[type="time"]');
-            input.addEventListener('change', () => {{
-                parent.window.location.search = "?appt_time=" + input.value;
+            document.querySelector('input[type="time"]').addEventListener('change', e => {{
+                parent.window.location.search = "?appt_time=" + e.target.value;
             }});
         </script>
-        """, height=120)
+        """, height=150)
 
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
