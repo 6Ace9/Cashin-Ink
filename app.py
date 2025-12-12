@@ -43,6 +43,8 @@ st.markdown(f"""
     <div class="main" style="text-align:center;">
     """,
     unsafe_allow_html=True
+    
+    )
 
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
