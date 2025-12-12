@@ -24,27 +24,23 @@ bg_b64 = img_b64("background.png")
 logo_html = f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">' if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
 bg_css = f"background:linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;" if bg_b64 else "background:#000;"
 
-st.markdown(
-    f"""
-    <style>
-        .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
-        .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
-        h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
-        .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
-        .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
-        .block-container {{ padding-bottom: 0px !important; }}
-        footer {{ visibility: hidden !important; }}
-    </style>
+st.markdown(f"""
+<style>
+    .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
+    .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
+    h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
+    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
+    .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
+    .block-container {{ padding-bottom: 0px !important; }}
+    footer {{ visibility: hidden !important; }}
+</style>
 
-        <div style="text-align:center; padding:20px 0;">
-            {logo_html}
-            <h3 style="margin: 15px 0 0 0; font-size: 1.8rem; letter-spacing: 1px;">LA - Premium Tattoo Studio</h3>
-        </div>
-
-    <div class="main" style="text-align:center;">
-    """,
-    unsafe_allow_html=True
-)
+<div style="text-align:center;padding:20px 0;">
+    {logo_html}
+    <h3>LA — Premium Tattoo Studio</h3>
+</div>
+<div class="main">
+""", unsafe_allow_html=True)
 
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
