@@ -1,4 +1,4 @@
-# app.py  ← FINAL: PAY BUTTON PERFECTLY CENTERED
+# app.py  ← FINAL: NO EXTRA SCROLL SPACE + PERFECT FOOTER
 import streamlit as st
 import sqlite3
 import os
@@ -26,17 +26,17 @@ bg_css = f"background:linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),url('da
 
 st.markdown(f"""
 <style>
-    .stApp {{ {bg_css} min-height:100vh; }}
+    .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
+    .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
     
-    /* CENTER THE PAY BUTTON */
-    .centered-button {{
-        display: flex;
-        justify-content: center;
-        margin-top: 30px;
-    }}
+    /* REMOVE ALL EXTRA SPACE BELOW FOOTER */
+    .block-container {{ padding-bottom: 0px !important; }}
+    footer {{ visibility: hidden !important; }}
+    .css-1d391kg {{ padding-bottom: 0px !important; }}
+    .css-1y0t9lf {{ padding-bottom: 0px !important; }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -164,7 +164,6 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # CENTERED PAY BUTTON
     st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
     submit = st.form_submit_button("PAY DEPOSIT → LOCK MY SLOT")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -223,4 +222,10 @@ with st.expander("Studio — Upcoming Bookings"):
         st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
-st.caption("© 2025 Cashin Ink — Miami, FL")
+
+# FINAL CLEAN FOOTER – NO EXTRA SPACE
+st.markdown("""
+<div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
+    © 2025 Cashin Ink — Miami, FL
+</div>
+""", unsafe_allow_html=True)
