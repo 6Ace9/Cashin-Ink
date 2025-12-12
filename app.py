@@ -1,4 +1,4 @@
-# app.py  ← FINAL: NO EXTRA SCROLL SPACE + PERFECT FOOTER
+# app.py  ← FINAL: CLEAN & PERFECT — NO SELECTED TEXT
 import streamlit as st
 import sqlite3
 import os
@@ -31,12 +31,8 @@ st.markdown(f"""
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
-    
-    /* REMOVE ALL EXTRA SPACE BELOW FOOTER */
     .block-container {{ padding-bottom: 0px !important; }}
     footer {{ visibility: hidden !important; }}
-    .css-1d391kg {{ padding-bottom: 0px !important; }}
-    .css-1y0t9lf {{ padding-bottom: 0px !important; }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -71,12 +67,6 @@ conn.commit()
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-
-if "appt_time" in st.query_params:
-    t = st.query_params["appt_time"]
-    if len(t) == 5 and t[2] == ":":
-        st.session_state.appt_time_str = t
-    st.query_params.clear()
 
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
@@ -113,25 +103,8 @@ with st.form("booking_form"):
             const d = document.querySelector('input[type="date"]');
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
-            d.onchange = () => {{ parent.window.location.search = "?appt_date=" + d.value; }};
         </script>
         """, height=160)
-
-        if "appt_date" in st.query_params:
-            new_date = st.query_params["appt_date"]
-            try:
-                datetime.strptime(new_date, "%Y-%m-%d")
-                st.session_state.appt_date_str = new_date
-                appt_date = datetime.strptime(new_date, "%Y-%m-%d").date()
-                st.query_params.clear()
-            except:
-                appt_date = datetime.today() + timedelta(days=1)
-        else:
-            appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-
-        if appt_date.weekday() == 6:
-            st.error("Closed on Sundays")
-            st.stop()
 
     with tc:
         st.markdown("**Start Time**")
@@ -146,21 +119,26 @@ with st.form("booking_form"):
             const t = document.querySelector('input[type="time"]');
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
-            t.onchange = () => {{ parent.window.location.search = "?appt_time=" + t.value; }};
         </script>
         """, height=160)
+
+    # Parse values
+    try:
+        appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
+    except:
+        appt_date = datetime.today() + timedelta(days=1)
 
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
+    if appt_date.weekday() == 6:
+        st.error("Closed on Sundays")
+        st.stop()
     if appt_time.hour < 12 or appt_time.hour > 20:
         st.error("Open 12 PM – 8 PM only")
         st.stop()
-
-    display_time = appt_time.strftime("%I:%M %p").lstrip("0")
-    st.success(f"Selected: **{appt_date.strftime('%A, %B %d')} at {display_time}**")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -201,7 +179,7 @@ with st.form("booking_form"):
             )
 
             c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-                bid, name, age, phone, email, description, str(appt_date), display_time,
+                bid, name, age, phone, email, description, str(appt_date), appt_time.strftime("%-I:%M %p"),
                 start_dt.astimezone(pytz.UTC).isoformat(), end_dt.astimezone(pytz.UTC).isoformat(),
                 0, session.id, ",".join(paths), datetime.utcnow().isoformat()
             ))
@@ -222,8 +200,6 @@ with st.expander("Studio — Upcoming Bookings"):
         st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
-
-# FINAL CLEAN FOOTER – NO EXTRA SPACE
 st.markdown("""
 <div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
     © 2025 Cashin Ink — Miami, FL
