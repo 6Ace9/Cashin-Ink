@@ -1,4 +1,4 @@
-# app.py  ← FINAL: NO KEYBOARD ON DATE OR TIME – ONLY NATIVE POPUPS
+# app.py  ← FINAL: PAY BUTTON PERFECTLY CENTERED
 import streamlit as st
 import sqlite3
 import os
@@ -29,7 +29,14 @@ st.markdown(f"""
     .stApp {{ {bg_css} min-height:100vh; }}
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
-    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:14px 32px; font-size:18px; }}
+    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
+    
+    /* CENTER THE PAY BUTTON */
+    .centered-button {{
+        display: flex;
+        justify-content: center;
+        margin-top: 30px;
+    }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -65,7 +72,6 @@ if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = [
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-# Update from URL
 if "appt_time" in st.query_params:
     t = st.query_params["appt_time"]
     if len(t) == 5 and t[2] == ":":
@@ -94,15 +100,12 @@ with st.form("booking_form"):
     
     with dc:
         st.markdown("**Select Date**")
-        # CUSTOM DATE PICKER – NO KEYBOARD, ONLY CALENDAR POPUP
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
-            <input type="date"
-                   value="{st.session_state.appt_date_str}"
+            <input type="date" value="{st.session_state.appt_date_str}"
                    min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
                    max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
-                   readonly
-                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
+                   readonly style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
                           height:56px;width:220px;font-size:20px;text-align:center;cursor:pointer;"
                    onclick="this.showPicker?.()">
         </div>
@@ -110,14 +113,10 @@ with st.form("booking_form"):
             const d = document.querySelector('input[type="date"]');
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
-            d.onfocus = () => d.showPicker?.();
-            d.onchange = () => {{
-                parent.window.location.search = "?appt_date=" + d.value;
-            }};
+            d.onchange = () => {{ parent.window.location.search = "?appt_date=" + d.value; }};
         </script>
         """, height=160)
 
-        # Update session state from URL
         if "appt_date" in st.query_params:
             new_date = st.query_params["appt_date"]
             try:
@@ -136,13 +135,9 @@ with st.form("booking_form"):
 
     with tc:
         st.markdown("**Start Time**")
-        # CUSTOM TIME PICKER – NO KEYBOARD, ONLY WHEEL
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
-            <input type="time"
-                   value="{st.session_state.appt_time_str}"
-                   step="3600"
-                   readonly
+            <input type="time" value="{st.session_state.appt_time_str}" step="3600" readonly
                    style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
                           height:56px;width:180px;font-size:22px;text-align:center;cursor:pointer;"
                    onclick="this.showPicker?.()">
@@ -151,14 +146,10 @@ with st.form("booking_form"):
             const t = document.querySelector('input[type="time"]');
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
-            t.onfocus = () => t.showPicker?.();
-            t.onchange = () => {{
-                parent.window.location.search = "?appt_time=" + t.value;
-            }};
+            t.onchange = () => {{ parent.window.location.search = "?appt_time=" + t.value; }};
         </script>
         """, height=160)
 
-    # Parse time
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
@@ -172,7 +163,11 @@ with st.form("booking_form"):
     st.success(f"Selected: **{appt_date.strftime('%A, %B %d')} at {display_time}**")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
+
+    # CENTERED PAY BUTTON
+    st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
     submit = st.form_submit_button("PAY DEPOSIT → LOCK MY SLOT")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not all([name, phone, email, description]) or age < 18 or not agree:
