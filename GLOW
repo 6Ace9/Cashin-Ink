@@ -1,4 +1,4 @@
-# app.py ← FINAL: Only logo glows green + Perfect transparency + Fast & Beautiful
+# app.py ← OPTIMIZED: Only logo glows green + Perfect transparency + Fast & Beautiful
 import streamlit as st
 import sqlite3
 import os
@@ -7,36 +7,26 @@ from datetime import datetime, timedelta
 import uuid
 import pytz
 import streamlit.components.v1 as components
-import base64
-import requests
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== FAST + CACHED IMAGE LOADER ====================
-@st.cache_data(ttl=3600)
-def img_b64(url):
-    try:
-        r = requests.get(url, timeout=10)
-        return base64.b64encode(r.content).decode()
-    except:
-        return None
-
-# RAW URLs — instant loading
-logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
-bg_b64   = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png")  # keep your real file name
+# ==================== FAST IMAGE LOADER VIA URL ====================
+# Use direct URLs instead of base64 for memory efficiency
+LOGO_URL = "https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png"
+BG_URL   = "https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png"
 
 # PERFECT BACKGROUND (fits all screens, no lag)
 bg_css = f"""
     background: linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.88)),
-                url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;
-""" if bg_b64 else "background:#000;"
+                url('{BG_URL}') center/cover no-repeat fixed;
+"""
 
 # LOGO: ONLY the logo glows — isolated with container
 logo_html = f"""
 <div class="logo-container">
-    <img src="data:image/png;base64,{logo_b64}" class="glowing-logo">
+    <img src="{LOGO_URL}" class="glowing-logo">
 </div>
-""" if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
+"""
 
 st.markdown(f"""
 <style>
@@ -101,7 +91,7 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# ==================== REST OF YOUR CODE (100% unchanged) ====================
+# ==================== REST OF YOUR ORIGINAL CODE ====================
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -149,43 +139,19 @@ with st.form("booking_form"):
     dc, tc = st.columns([2,1])
     with dc:
         st.markdown("**Select Date**")
-        components.html(f"""
-        <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
-               min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
-               max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="background:#111;color:white;border:2px solid #00C853;border-radius:10px;height:60px;width:240px;font-size:22px;text-align:center;">
-        <script>
-            const d = document.getElementById('datePicker');
-            d.removeAttribute('readonly');
-            d.showPicker && d.addEventListener('click', () => d.showPicker());
-        </script>
-        """, height=180)
+        st.session_state.appt_date_str = st.date_input(
+            "Choose a date",
+            value=datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date(),
+            min_value=datetime.today().date() + timedelta(days=1),
+            max_value=datetime.today().date() + timedelta(days=90)
+        ).strftime("%Y-%m-%d")
 
     with tc:
         st.markdown("**Start Time**")
-        components.html(f"""
-        <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600"
-               style="background:#111;color:white;border:2px solid #00C853;border-radius:10px;height:60px;width:200px;font-size:24px;text-align:center;">
-        <script>
-            const t = document.getElementById('timePicker');
-            t.removeAttribute('readonly');
-            t.showPicker && t.addEventListener('click', () => t.showPicker());
-        </script>
-        """, height=180)
-
-    components.html("""
-    <script>
-        document.getElementById('datePicker')?.addEventListener('change', () => 
-            parent.streamlit.setComponentValue({date: this.value}));
-        document.getElementById('timePicker')?.addEventListener('change', () => 
-            parent.streamlit.setComponentValue({time: this.value}));
-    </script>
-    """, height=0)
-
-    val = st.session_state.get("streamlit_component_value", {})
-    if isinstance(val, dict):
-        if val.get("date"): st.session_state.appt_date_str = val["date"]
-        if val.get("time"): st.session_state.appt_time_str = val["time"]
+        st.session_state.appt_time_str = st.time_input(
+            "Choose time",
+            value=datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+        ).strftime("%H:%M")
 
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
