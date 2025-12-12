@@ -1,4 +1,4 @@
-# app.py ← FINAL: ORIGINAL LOOK + DESKTOP FIX (NO LOGIC CHANGES)
+# app.py ← FINAL: ORIGINAL LOOK + GREY/WHITE PICKERS
 import streamlit as st
 import sqlite3
 import os
@@ -51,25 +51,31 @@ st.markdown(f"""
     .centered-button {{ display:flex; justify-content:center; margin-top:30px; }}
     footer {{ visibility:hidden !important; }}
 
-    /* ===== DESKTOP DATE & TIME PICKER COLOR FIX ONLY ===== */
+    /* ===== GREY + WHITE DATE & TIME PICKERS ===== */
     input[type="date"],
     input[type="time"] {{
         color-scheme: dark;
-        color: #00C853 !important;
-        background-color: #1e1e1e !important;
-        border: 2px solid #00C853 !important;
+        color: #ffffff !important;
+        background-color: #2b2b2b !important;
+        border: 2px solid #555 !important;
     }}
 
     input[type="date"]:focus,
     input[type="time"]:focus {{
         outline: none !important;
-        box-shadow: 0 0 0 2px #00C85360 !important;
+        box-shadow: 0 0 0 2px #777 !important;
     }}
 
     input[type="date"]::-webkit-calendar-picker-indicator,
     input[type="time"]::-webkit-calendar-picker-indicator {{
-        filter: invert(1) brightness(0.9) sepia(1) saturate(5) hue-rotate(90deg);
+        filter: invert(1) brightness(1);
         cursor: pointer;
+    }}
+
+    input[type="date"]::selection,
+    input[type="time"]::selection {{
+        background:#555 !important;
+        color:#fff !important;
     }}
 </style>
 
@@ -170,7 +176,6 @@ with st.form("booking_form"):
         </script>
         """, height=180)
 
-    # ORIGINAL STATE READ (UNCHANGED)
     appt_date_str = st.session_state.get(
         "appt_date_str",
         (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
