@@ -1,4 +1,4 @@
-# app.py  ← FINAL: INSTANT UPDATE + EXACT SAME DESIGN AS BEFORE
+# app.py  ← FINAL: LIVE UPDATE (DATE & TIME CHANGE → TEXT UPDATES INSTANTLY)
 import streamlit as st
 import sqlite3
 import os
@@ -103,12 +103,12 @@ with st.form("booking_form"):
             const d = document.querySelector('input[type="date"]');
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
-            d.onchange = () => {{ 
-                parent.document.getElementById('date-display').innerText = d.value; 
-                parent.window.__date_value = d.value;
+            d.onchange = () => {{
+                // Update session state via Streamlit's magic
+                Streamlit.setComponentValue({{date: d.value}});
             }};
         </script>
-        """, height=160)
+        """, height=160, key="date_picker")
 
     with tc:
         st.markdown("**Start Time**")
@@ -123,37 +123,44 @@ with st.form("booking_form"):
             const t = document.querySelector('input[type="time"]');
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
-            t.onchange = () => {{ 
-                parent.document.getElementById('time-display').innerText = t.value;
-                parent.window.__time_value = t.value;
+            t.onchange = () => {{
+                Streamlit.setComponentValue({{time: t.value}});
             }};
         </script>
-        """, height=160)
+        """, height=160, key="time_picker")
 
-    # Get current values
+    # Get values from components
+    date_value = st.session_state.get("date_picker", {}).get("date")
+    time_value = st.session_state.get("time_picker", {}).get("time")
+
+    if date_value:
+        st.session_state.appt_date_str = date_value
+    if time_value:
+        st.session_state.appt_time_str = time_value
+
+    # Parse current values
     try:
-        current_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d")
+        appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
     except:
-        current_date = datetime.today() + timedelta(days=1)
+        appt_date = datetime.today() + timedelta(days=1)
+
     try:
-        current_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+        appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
-        current_time = datetime.strptime("13:00", "%H:%M").time()
+        appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    # Format exactly how you want
-    display_date = current_date.strftime("%A, %B %-d")
-    display_time = current_time.strftime("%-I:%M %p")
-
-    # This updates INSTANTLY when date/time changes
-    st.success(f"**Selected:** {display_date} at {display_time}")
-
-    if current_time.hour < 12 or current_time.hour > 20:
+    # Validation
+    if appt_date.weekday() == 6:
+        st.error("Closed on Sundays")
+        st.stop()
+    if appt_time.hour < 12 or appt_time.hour > 20:
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
-    if current_date.weekday() == 6:
-        st.error("Closed on Sundays")
-        st.stop()
+    # LIVE UPDATE — THIS CHANGES INSTANTLY
+    display_date = appt_date.strftime("%A, %B %-d")
+    display_time = appt_time.strftime("%-I:%M %p")
+    st.success(f"**Selected:** {display_date} at {display_time}")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -165,7 +172,7 @@ with st.form("booking_form"):
         if not all([name, phone, email, description]) or age < 18 or not agree:
             st.error("Complete all fields & agree")
         else:
-            start_dt = STUDIO_TZ.localize(datetime.combine(current_date.date(), current_time))
+            start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
             end_dt = start_dt + timedelta(hours=2)
 
             conflict = c.execute("SELECT name FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
@@ -194,7 +201,7 @@ with st.form("booking_form"):
             )
 
             c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-                bid, name, age, phone, email, description, str(current_date.date()), display_time,
+                bid, name, age, phone, email, description, str(appt_date), display_time,
                 start_dt.astimezone(pytz.UTC).isoformat(), end_dt.astimezone(pytz.UTC).isoformat(),
                 0, session.id, ",".join(paths), datetime.utcnow().isoformat()
             ))
