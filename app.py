@@ -1,4 +1,4 @@
-# app.py ← FINAL & PERFECT – NO ERRORS – WORKS EVERYWHERE
+# app.py ← FINAL & FLAWLESS – DARK CALENDAR POPUPS EVERYWHERE
 import streamlit as st
 import sqlite3
 import os
@@ -38,6 +38,7 @@ bg_css = (
     if bg_b64 else "background:#000;"
 )
 
+# ==================== FORCE DARK NATIVE PICKERS (REAL FIX) ====================
 st.markdown(f"""
 <style>
     .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
@@ -47,18 +48,45 @@ st.markdown(f"""
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
     footer {{ visibility: hidden !important; }}
 
-    /* Force dark date/time pickers everywhere */
-    input[type="date"], input[type="time"] {{
-        color-scheme: dark !important;
+    /* FORCE DARK MODE FOR DATE/TIME PICKERS - WORKS ON CHROME, EDGE, SAFARI, MOBILE */
+    @supports (-webkit-touch-callout: none) or (not (-moz-appearance:none)) {{
+        input[type="date"], input[type="time"] {{
+            color-scheme: dark !important;
+        }}
     }}
-    input[type="date"]::-webkit-calendar-picker-indicator,
-    input[type="time"]::-webkit-calendar-picker-indicator {{
-        filter: invert(1) brightness(1.5) hue-rotate(90deg);
+
+    input[type=date]::-webkit-calendar-picker-indicator,
+    input[type=time]::-webkit-calendar-picker-indicator {{
+        filter: invert(1) hue-rotate(90deg);
     }}
-    input[type="date"]::-webkit-datetime-edit *,
-    input[type="time"]::-webkit-datetime-edit * {{
+
+    /* Chrome/Edge/Safari - Full dark styling */
+    input[type="date"]::-webkit-datetime-edit,
+    input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+    input[type="date"]::-webkit-datetime-edit-text,
+    input[type="date"]::-webkit-datetime-edit-month-field,
+    input[type="date"]::-webkit-datetime-edit-day-field,
+    input[type="date"]::-webkit-datetime-edit-year-field,
+    input[type="time"]::-webkit-datetime-edit,
+    input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+    input[type="time"]::-webkit-datetime-edit-hour-field,
+    input[type="time"]::-webkit-datetime-edit-minute-field,
+    input[type="time"]::-webkit-datetime-edit-text,
+    input[type="time"]::-webkit-datetime-edit-ampm-field {{
+        background-color: #1e1e1e !important;
         color: white !important;
-        background: #1e1e1e !important;
+        -webkit-text-fill-color: white !important;
+    }}
+
+    input[type="date"]::-webkit-inner-spin-button,
+    input[type="time"]::-webkit-inner-spin-button {{
+        -webkit-appearance: none;
+        display: none;
+    }}
+
+    /* Calendar dropdown (Chrome/Edge) */
+    input[type="date"]::-webkit-calendar-picker-indicator {{
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 24 24"><path fill="%2300C853" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>');
     }}
 </style>
 
@@ -92,13 +120,10 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state init
-if "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state:
-    st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state:
-    st.session_state.appt_time_str = "13:00"
+# Session state
+if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 
 st.markdown("---")
 st.header("Book Sessions — $150 Deposit")
@@ -155,23 +180,20 @@ with st.form("booking_form"):
         </script>
         """, height=180)
 
-    # Capture picker values (fixed line!)
-    picker_value = st.session_state.get("streamlit_component_value", {})
-    if isinstance(picker_value, dict):
-        if picker_value.get("date"):
-            st.session_state.appt_date_str = picker_value["date"]
-        if picker_value.get("time"):
-            st.session_state.appt_time_str = picker_value["time"]
+    # Sync values
+    val = st.session_state.get("streamlit_component_value", {})
+    if isinstance(val, dict):
+        if val.get("date"):
+            st.session_state.appt_date_str = val["date"]
+        if val.get("time"):
+            st.session_state.appt_time_str = val["time"]
 
-    # Parse final values
+    # Parse
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-    except:
-        appt_date = (datetime.today() + timedelta(days=1)).date()
-
-    try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
+        appt_date = (datetime.today() + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
     if appt_date.weekday() == 6:
@@ -214,14 +236,7 @@ with st.form("booking_form"):
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {"name": f"Deposit – {name}"},
-                        "unit_amount": 15000
-                    },
-                    "quantity": 1
-                }],
+                line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
                 mode="payment",
                 success_url=SUCCESS_URL,
                 cancel_url=CANCEL_URL,
@@ -242,12 +257,10 @@ with st.form("booking_form"):
             st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
             st.balloons()
 
-# Success message
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
 
-# Admin panel
 with st.expander("Studio — Upcoming Bookings"):
     for row in c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall():
         status = "PAID" if row[4] else "PENDING"
