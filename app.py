@@ -1,4 +1,4 @@
-# app.py  ← FINAL: BUTTON SAYS "Schedule Appointment"
+# app.py  ← FINAL: "Schedule Appointment" + PERFECTLY CENTERED
 import streamlit as st
 import sqlite3
 import os
@@ -142,6 +142,7 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
+    # PERFECTLY CENTERED BUTTON
     st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
     submit = st.form_submit_button("Schedule Appointment")
     st.markdown("</div>", unsafe_allow_html=True)
