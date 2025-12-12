@@ -1,4 +1,4 @@
-# app.py  ← FINAL: "Selected:" + DATE UNDERNEATH
+# app.py  ← FINAL: INSTANT UPDATE + EXACT SAME DESIGN AS BEFORE
 import streamlit as st
 import sqlite3
 import os
@@ -68,12 +68,6 @@ if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = [
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
-if "appt_time" in st.query_params:
-    t = st.query_params["appt_time"]
-    if len(t) == 5 and t[2] == ":":
-        st.session_state.appt_time_str = t
-    st.query_params.clear()
-
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
 st.info("2-hour session • Deposit locks your slot • Non-refundable")
@@ -109,25 +103,12 @@ with st.form("booking_form"):
             const d = document.querySelector('input[type="date"]');
             d.onclick = () => d.showPicker?.();
             d.ontouchstart = () => d.showPicker?.();
-            d.onchange = () => {{ parent.window.location.search = "?appt_date=" + d.value; }};
+            d.onchange = () => {{ 
+                parent.document.getElementById('date-display').innerText = d.value; 
+                parent.window.__date_value = d.value;
+            }};
         </script>
         """, height=160)
-
-        if "appt_date" in st.query_params:
-            new_date = st.query_params["appt_date"]
-            try:
-                datetime.strptime(new_date, "%Y-%m-%d")
-                st.session_state.appt_date_str = new_date
-                appt_date = datetime.strptime(new_date, "%Y-%m-%d").date()
-                st.query_params.clear()
-            except:
-                appt_date = datetime.today() + timedelta(days=1)
-        else:
-            appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-
-        if appt_date.weekday() == 6:
-            st.error("Closed on Sundays")
-            st.stop()
 
     with tc:
         st.markdown("**Start Time**")
@@ -142,31 +123,37 @@ with st.form("booking_form"):
             const t = document.querySelector('input[type="time"]');
             t.onclick = () => t.showPicker?.();
             t.ontouchstart = () => t.showPicker?.();
-            t.onchange = () => {{ parent.window.location.search = "?appt_time=" + t.value; }};
+            t.onchange = () => {{ 
+                parent.document.getElementById('time-display').innerText = t.value;
+                parent.window.__time_value = t.value;
+            }};
         </script>
         """, height=160)
 
-    # Parse time
+    # Get current values
     try:
-        appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+        current_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d")
     except:
-        appt_time = datetime.strptime("13:00", "%H:%M").time()
+        current_date = datetime.today() + timedelta(days=1)
+    try:
+        current_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+    except:
+        current_time = datetime.strptime("13:00", "%H:%M").time()
 
-    if appt_time.hour < 12 or appt_time.hour > 20:
+    # Format exactly how you want
+    display_date = current_date.strftime("%A, %B %-d")
+    display_time = current_time.strftime("%-I:%M %p")
+
+    # This updates INSTANTLY when date/time changes
+    st.success(f"**Selected:** {display_date} at {display_time}")
+
+    if current_time.hour < 12 or current_time.hour > 20:
         st.error("Open 12 PM – 8 PM only")
         st.stop()
 
-    # EXACTLY HOW YOU WANT IT
-    display_date = appt_date.strftime("%A, %B %-d")
-    display_time = appt_time.strftime("%-I:%M %p")
-
-    st.markdown("""
-    <div style="text-align:center; background:#00C853; color:black; padding:16px; border-radius:12px; font-size:20px; font-weight:bold; margin:20px 0;">
-        Selected:
-        <br>
-        <span style="font-size:28px;">{date} at {time}</span>
-    </div>
-    """.format(date=display_date, time=display_time), unsafe_allow_html=True)
+    if current_date.weekday() == 6:
+        st.error("Closed on Sundays")
+        st.stop()
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -178,7 +165,7 @@ with st.form("booking_form"):
         if not all([name, phone, email, description]) or age < 18 or not agree:
             st.error("Complete all fields & agree")
         else:
-            start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
+            start_dt = STUDIO_TZ.localize(datetime.combine(current_date.date(), current_time))
             end_dt = start_dt + timedelta(hours=2)
 
             conflict = c.execute("SELECT name FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
@@ -207,7 +194,7 @@ with st.form("booking_form"):
             )
 
             c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-                bid, name, age, phone, email, description, str(appt_date), display_time,
+                bid, name, age, phone, email, description, str(current_date.date()), display_time,
                 start_dt.astimezone(pytz.UTC).isoformat(), end_dt.astimezone(pytz.UTC).isoformat(),
                 0, session.id, ",".join(paths), datetime.utcnow().isoformat()
             ))
@@ -228,7 +215,6 @@ with st.expander("Studio — Upcoming Bookings"):
         st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
-
 st.markdown("""
 <div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
     © 2025 Cashin Ink — Miami, FL
