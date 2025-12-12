@@ -1,4 +1,4 @@
-# app.py ← FINAL: ORIGINAL LOOK + DESKTOP + MOBILE CONSISTENT PICKERS
+# app.py ← FINAL: ORIGINAL LOOK + DESKTOP FIX (NO LOGIC CHANGES)
 import streamlit as st
 import sqlite3
 import os
@@ -51,7 +51,7 @@ st.markdown(f"""
     .centered-button {{ display:flex; justify-content:center; margin-top:30px; }}
     footer {{ visibility:hidden !important; }}
 
-    /* ===== DESKTOP DATE & TIME PICKER COLOR FIX ===== */
+    /* ===== DESKTOP DATE & TIME PICKER COLOR FIX ONLY ===== */
     input[type="date"],
     input[type="time"] {{
         color-scheme: dark;
@@ -70,17 +70,6 @@ st.markdown(f"""
     input[type="time"]::-webkit-calendar-picker-indicator {{
         filter: invert(1) brightness(0.9) sepia(1) saturate(5) hue-rotate(90deg);
         cursor: pointer;
-    }}
-
-    input[type="date"]::selection,
-    input[type="time"]::selection {{
-        background:#00C853 !important;
-        color:#000 !important;
-    }}
-
-    input[type="date"]::-moz-focus-inner,
-    input[type="time"]::-moz-focus-inner {{
-        border:0;
     }}
 </style>
 
@@ -149,61 +138,48 @@ with st.form("booking_form"):
     dc, tc = st.columns([2,1])
 
     with dc:
+        st.markdown("**Select Date**")
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
             <input type="date" id="datePicker"
-                value="{st.session_state.appt_date_str}"
-                min="{(datetime.today()+timedelta(days=1)).strftime('%Y-%m-%d')}"
-                max="{(datetime.today()+timedelta(days=90)).strftime('%Y-%m-%d')}"
-                style="height:56px;width:220px;font-size:20px;text-align:center;">
+                   value="{st.session_state.appt_date_str}"
+                   min="{(datetime.today()+timedelta(days=1)).strftime('%Y-%m-%d')}"
+                   max="{(datetime.today()+timedelta(days=90)).strftime('%Y-%m-%d')}"
+                   style="height:56px;width:220px;font-size:20px;text-align:center;">
         </div>
         <script>
             const d = document.getElementById('datePicker');
             d.removeAttribute('readonly');
-            d.showPicker && d.addEventListener('click',()=>d.showPicker());
-            d.addEventListener('change',()=>parent.postMessage({type:'date',value:d.value},'*'));
+            d.showPicker && d.addEventListener('click', () => d.showPicker());
         </script>
         """, height=180)
 
     with tc:
+        st.markdown("**Start Time**")
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
             <input type="time" id="timePicker"
-                value="{st.session_state.appt_time_str}"
-                step="3600"
-                style="height:56px;width:180px;font-size:22px;text-align:center;">
+                   value="{st.session_state.appt_time_str}"
+                   step="3600"
+                   style="height:56px;width:180px;font-size:22px;text-align:center;">
         </div>
         <script>
             const t = document.getElementById('timePicker');
             t.removeAttribute('readonly');
-            t.showPicker && t.addEventListener('click',()=>t.showPicker());
-            t.addEventListener('change',()=>parent.postMessage({type:'time',value:t.value},'*'));
+            t.showPicker && t.addEventListener('click', () => t.showPicker());
         </script>
         """, height=180)
 
-    components.html("""
-    <script>
-        window.addEventListener('message', e => {
-            if(e.data?.type === 'date'){
-                window.parent.streamlit?.setComponentValue({date:e.data.value});
-            }
-            if(e.data?.type === 'time'){
-                window.parent.streamlit?.setComponentValue({time:e.data.value});
-            }
-        });
-    </script>
-    """, height=0)
-
-    picker_value = st.session_state.get("streamlit_component_value", {})
-    if isinstance(picker_value, dict):
-        if picker_value.get("date"):
-            st.session_state.appt_date_str = picker_value["date"]
-        if picker_value.get("time"):
-            st.session_state.appt_time_str = picker_value["time"]
+    # ORIGINAL STATE READ (UNCHANGED)
+    appt_date_str = st.session_state.get(
+        "appt_date_str",
+        (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+    )
+    appt_time_str = st.session_state.get("appt_time_str", "13:00")
 
     try:
-        appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-        appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+        appt_date = datetime.strptime(appt_date_str, "%Y-%m-%d").date()
+        appt_time = datetime.strptime(appt_time_str, "%H:%M").time()
     except:
         appt_date = datetime.today().date() + timedelta(days=1)
         appt_time = datetime.strptime("13:00", "%H:%M").time()
@@ -275,7 +251,10 @@ with st.form("booking_form"):
             conn.commit()
 
             st.success("Taking you to secure payment…")
-            st.markdown(f"<meta http-equiv='refresh' content='2;url={session.url}'>", unsafe_allow_html=True)
+            st.markdown(
+                f"<meta http-equiv='refresh' content='2;url={session.url}'>",
+                unsafe_allow_html=True
+            )
             st.balloons()
 
 # ==================== SUCCESS & ADMIN ====================
@@ -297,7 +276,7 @@ with st.expander("Studio — Upcoming Bookings"):
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
-<div style="text-align:center;padding:20px 0 30px;color:#888;font-size:14px;">
+<div style="text-align:center; padding:20px 0 30px; color:#888; font-size:14px;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
