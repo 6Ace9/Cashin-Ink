@@ -1,4 +1,4 @@
-# app.py  ← ONLY CENTERED – 100% YOUR WORKING VERSION + CENTER FIX
+# app.py  ← FINAL: TAPS OPEN CALENDAR (NO KEYBOARD) + CENTERED
 import streamlit as st
 import sqlite3
 import os
@@ -39,7 +39,7 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# === 100% YOUR WORKING CODE ===
+# === YOUR FULL CODE (only time picker changed) ===
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -102,16 +102,22 @@ with st.form("booking_form"):
 
     with tc:
         st.markdown("**Start Time**")
-        # THIS IS THE ONLY LINE CHANGED — PERFECT CENTERING
+        # FINAL: TAPS OPEN CALENDAR WHEEL (NO KEYBOARD) + CENTERED + DARK STYLE
         components.html(f"""
         <div style="display:flex; justify-content:center; align-items:center; height:140px;">
-            <input type="time" value="{st.session_state.appt_time_str}" step="3600" 
+            <input type="time" 
+                   value="{st.session_state.appt_time_str}" 
+                   step="3600"
                    style="background:#1e1e1e; color:white; border:2px solid #00C853; border-radius:8px; 
-                          height:50px; width:170px; font-size:20px; text-align:center;">
+                          height:50px; width:170px; font-size:20px; text-align:center;
+                          -webkit-appearance: none; appearance: none;">
         </div>
         <script>
-            document.querySelector('input[type="time"]').addEventListener('change', e => {{
-                parent.window.location.search = "?appt_time=" + e.target.value;
+            const input = document.querySelector('input[type="time"]');
+            input.addEventListener('focus', () => input.showPicker?.());
+            input.addEventListener('click', () => input.showPicker?.());
+            input.addEventListener('change', () => {{
+                parent.window.location.search = "?appt_time=" + input.value;
             }});
         </script>
         """, height=150)
