@@ -1,4 +1,4 @@
-# app.py  ← FINAL: NO KEYBOARD – ONLY NATIVE TIME PICKER POPUP + CENTERED
+# app.py  ← FINAL VERSION – NO KEYBOARD, ONLY TIME WHEEL + PERFECTLY CENTERED
 import streamlit as st
 import sqlite3
 import os
@@ -39,7 +39,7 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# === YOUR FULL CODE (only time picker changed) ===
+# === YOUR FULL CODE (ONLY TIME PICKER FIXED BELOW) ===
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -102,29 +102,27 @@ with st.form("booking_form"):
 
     with tc:
         st.markdown("**Start Time**")
-        # FINAL FIX: NO KEYBOARD – ONLY NATIVE TIME PICKER POPUP (iOS + Android)
+        # FINAL FIX – NO KEYBOARD, ONLY NATIVE TIME WHEEL + CENTERED
         components.html(f"""
-        <div style="display:flex; justify-content:center; align-items:center; height:140px;">
-            <input type="time" 
-                   value="{st.session_state.appt_time_str}" 
+        <div style="display:flex;justify-content:center;align-items:center;height:160px;">
+            <input type="time"
+                   value="{st.session_state.appt_time_str}"
                    step="3600"
                    readonly
-                   style="background:#1e1e1e; color:white; border:2px solid #00C853; border-radius:8px; 
-                          height:50px; width:170px; font-size:20px; text-align:center;
-                          -webkit-appearance: none; appearance: none; cursor:pointer;">
+                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
+                          height:56px;width:180px;font-size:22px;text-align:center;cursor:pointer;"
+                   onclick="this.showPicker?.()">
         </div>
         <script>
-            const input = document.querySelector('input[type="time"]');
-            // Force open native picker on tap (iOS + Android)
-            input.addEventListener('click', () => input.showPicker?.() || input.focus());
-            input.addEventListener('touchstart', () => input.showPicker?.() || input.focus());
-            input.addEventListener('focus', () => input.showPicker?.());
-            // Update URL on change
-            input.addEventListener('change', () => {{
-                parent.window.location.search = "?appt_time=" + input.value;
-            }});
+            const i = document.querySelector('input[type="time"]');
+            i.onclick = () => i.showPicker?.();
+            i.ontouchstart = () => i.showPicker?.();
+            i.onfocus = () => i.showPicker?.();
+            i.onchange = () => {{
+                parent.window.location.search = "?appt_time=" + i.value;
+            }};
         </script>
-        """, height=150)
+        """, height=170)
 
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
