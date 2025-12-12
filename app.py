@@ -202,6 +202,6 @@ with st.expander("Studio — Upcoming Bookings"):
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
 <div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
-    © 2025 Cashin Ink — Miami, FL
+    © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
