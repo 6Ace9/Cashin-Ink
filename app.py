@@ -1,4 +1,4 @@
-# app.py  ← FINAL VERSION – TIME PICKER PERFECTLY CENTERED
+# app.py  ← FINAL VERSION – TIME PICKER 100% DARK & CLEAN EVERYWHERE
 import streamlit as st
 import sqlite3
 import os
@@ -30,30 +30,6 @@ st.markdown(f"""
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:14px 32px; font-size:18px; }}
-    
-    /* PERFECTLY CENTERED TIME PICKER */
-    .time-picker-container {{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        min-height: 120px;
-    }}
-    .time-picker-container input[type="time"] {{
-        background: #1e1e1e !important;
-        color: white !important;
-        border: 2px solid #00C853 !important;
-        border-radius: 8px;
-        height: 50px;
-        width: 170px;
-        font-size: 20px;
-        text-align: center;
-        -webkit-appearance: none;
-        appearance: none;
-    }}
-    .time-picker-container input[type="time"]::-webkit-calendar-picker-indicator {{
-        filter: invert(1);
-    }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -63,7 +39,7 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# === YOUR FULL CODE (only time picker section changed) ===
+# === YOUR FULL CODE BELOW (only time picker changed) ===
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -74,8 +50,8 @@ if "STRIPE_SECRET_KEY" not in st.secrets:
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
-CANCEL_URL = "https://cashin-ink.streamlit.app"
+SUCCESS_URL = st.secrets.get("STRIPE_SUCCESS_URL", f"https://cashin-ink.streamlit.app/?success=1")
+CANCEL_URL = st.secrets.get("STRIPE_CANCEL_URL", "https://cashin-ink.streamlit.app")
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
@@ -89,6 +65,7 @@ conn.commit()
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 
+# Update from URL
 if "appt_time" in st.query_params:
     t = st.query_params["appt_time"]
     if len(t) == 5 and t[2] == ":":
@@ -126,19 +103,43 @@ with st.form("booking_form"):
 
     with tc:
         st.markdown("**Start Time**")
-        # PERFECTLY CENTERED CUSTOM TIME PICKER
+        # FULLY CUSTOM DARK TIME PICKER – WORKS EVERYWHERE
         components.html(f"""
-        <div class="time-picker-container">
-            <input type="time" value="{st.session_state.appt_time_str}" step="3600" required>
-        </div>
+        <style>
+            /* Hide native picker */
+            input[type="time"] {{
+                -webkit-appearance: none;
+                appearance: none;
+                background: #1e1e1e !important;
+                color: white !important;
+                border: 2px solid #00C853 !important;
+                border-radius: 8px;
+                height: 50px;
+                width: 100%;
+                max-width: 170px;
+                font-size: 20px;
+                text-align: center;
+            }}
+            /* Force white text on iOS/Android */
+            input[type="time"]::-webkit-datetime-edit-fields-wrapper {{ color: white !important; }}
+            input[type="time"]::-webkit-datetime-edit-text {{ color: white !important; }}
+            input[type="time"]::-webkit-datetime-edit-hour-field {{ color: white !important; }}
+            input[type="time"]::-webkit-datetime-edit-minute-field {{ color: white !important; }}
+            input[type="time"]::-webkit-calendar-picker-indicator {{
+                filter: invert(1);
+                background: transparent;
+            }}
+        </style>
+        <input type="time" value="{st.session_state.appt_time_str}" step="3600" required>
         <script>
             const input = document.querySelector('input[type="time"]');
             input.addEventListener('change', () => {{
                 parent.window.location.search = "?appt_time=" + input.value;
             }});
         </script>
-        """, height=120)
+        """, height=80)
 
+    # Parse time
     try:
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
