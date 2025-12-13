@@ -91,8 +91,10 @@ st.markdown("""
     section.main { margin-bottom:0!important; padding-bottom:0!important; }
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 </style>
+""", unsafe_allow_html=True)
 
 st.markdown('''
+<div class="main">
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
 </style>
@@ -113,7 +115,6 @@ st.markdown('''
     </h3>
 </div>
 
-<div class="main">
 """, unsafe_allow_html=True)
 
 # ==================== CONFIG ====================
