@@ -27,21 +27,33 @@ st.markdown("""
         content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0, 0, 0, 0.86); z-index: -1;
     }
+
+    /* GLASS CARD WITH SEXY GREEN GLOW */
     .main {
         background: rgba(22, 22, 28, 0.6);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border-radius: 26px;
-        border: 1px solid rgba(255,255,255,0.07);
-        box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+        border: 1px solid rgba(0, 200, 83, 0.4);
+        box-shadow: 
+            0 10px 40px rgba(0,0,0,0.7),
+            0 0 30px rgba(0, 200, 83, 0.4),
+            0 0 60px rgba(0, 255, 100, 0.25),
+            inset 0 0 20px rgba(0, 255, 100, 0.1);
         margin: 20px auto;
         max-width: 960px;
         padding: 50px;
-        margin-bottom: 10px;
+        animation: pulseGlow 6s ease-in-out infinite alternate;
     }
+
+    @keyframes pulseGlow {
+        from { box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px rgba(0,200,83,0.4), 0 0 60px rgba(0,255,100,0.25), inset 0 0 20px rgba(0,255,100,0.1); }
+        to   { box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 40px rgba(0,200,83,0.6), 0 0 80px rgba(0,255,100,0.4), inset 0 0 30px rgba(0,255,100,0.15); }
+    }
+
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
-        to   { filter: drop-shadow(0 0 0 45px #00C853); }
+        to   { filter: drop-shadow(0 0 45px #00C853); }
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
 
@@ -70,7 +82,7 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL ALL STREAMLIT FOOTER & EXTRA SPACE */
+    /* KILL ALL STREAMLIT GARBAGE */
     footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
     .block-container { padding-bottom:0!important; margin-bottom:0!important; }
     section.main { margin-bottom:0!important; padding-bottom:0!important; }
@@ -98,7 +110,7 @@ stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 ICLOUD_ENABLED = "ICLOUD_EMAIL" in st.secrets and "ICLOUD_APP_PASSWORD" in st.secrets
 if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
-    ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
+    ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD]
 
 SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
@@ -119,7 +131,7 @@ if "appt_date_str" not in st.session_state:
 if "appt_time_str" not in st.session_state:
     st.session_state.appt_time_str = "13:00"
 
-# ==================== SUCCESS PAGE ====================
+# ==================== SUCCESS ====================
 if st.query_params.get("success") == "1":
     st.balloons()
     st.success("Payment Confirmed! Your slot is locked.")
@@ -165,8 +177,7 @@ END:VCALENDAR""".format(
                 s.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 s.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 s.quit()
-            except:
-                pass
+            except: pass
             c.execute("UPDATE bookings SET deposit_paid=1 WHERE id=?", (bid,))
             conn.commit()
     st.stop()
@@ -193,7 +204,6 @@ with st.form("booking_form", clear_on_submit=True):
 
     st.markdown("### Select Date & Time")
 
-    # PERFECT, SMALL, NEVER CUT OFF PICKERS
     dc, tc = st.columns(2)
     with dc:
         components.html(f"""
@@ -296,7 +306,7 @@ with st.form("booking_form", clear_on_submit=True):
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# FINAL WHITE FOOTER — VISIBLE, NO SPACE BELOW
+# CLEAN WHITE FOOTER — VISIBLE & SEXY
 st.markdown("""
 <div style="text-align:center; padding:40px 0 20px 0; color:white; font-size:16px; font-weight:500; letter-spacing:1px;">
     © 2025 Cashin Ink — Covina, CA
