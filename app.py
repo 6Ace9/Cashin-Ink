@@ -52,6 +52,11 @@ st.markdown("""
         flex: 1;
     }
 
+    @keyframes pulseGlow {
+        from { box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px rgba(0,200,83,0.4), 0 0 60px rgba(0,255,100,0.25), inset 0 0 20px rgba(0,255,100,0.1); }
+        to   { box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 40px rgba(0,200,83,0.6), 0 0 80px rgba(0,255,100,0.4), inset 0 0 30px rgba(0,255,100,0.15); }
+    }
+
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
         to   { filter: drop-shadow(0 0 45px #00C853); }
@@ -100,9 +105,13 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    footer, [data-testid="stFooter"] { display:none!important; }
+    /* KILL EVERYTHING AT BOTTOM — 100% GONE */
+    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
+    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
+    section.main { margin-bottom:0!important; padding-bottom:0!important; }
+    .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 
-    /* Calendar styling */
+    /* Calendar custom styling to match theme */
     .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
     .fc-theme-standard td, .fc-theme-standard th { border-color: #00C85340; }
     .fc-button-primary { background: #00C853 !important; border: none !important; }
@@ -149,9 +158,9 @@ if "uploaded_files" not in st.session_state:
 if "appt_date_str" not in st.session_state:
     st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
 if "appt_start_time_str" not in st.session_state:
-    st.session_state.appt_start_time_str = "13:00"  # 1:00 PM
+    st.session_state.appt_start_time_str = "13:00"
 if "appt_end_time_str" not in st.session_state:
-    st.session_state.appt_end_time_str = "15:00"    # 3:00 PM
+    st.session_state.appt_end_time_str = "15:00"
 
 # ==================== SUCCESS HANDLING ====================
 if st.query_params.get("success") == "1":
@@ -289,7 +298,10 @@ with st.form("booking_form", clear_on_submit=True):
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Date</small>", unsafe_allow_html=True)
         min_date = datetime.now(STUDIO_TZ).date() + timedelta(days=1)
         max_date = min_date + timedelta(days=90)
-        default_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
+        try:
+            default_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
+        except:
+            default_date = min_date
         selected_date = st.date_input(
             "",
             value=default_date,
@@ -301,7 +313,6 @@ with st.form("booking_form", clear_on_submit=True):
 
     with col_start:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
-        # Default to 1:00 PM if not set
         try:
             default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
         except:
@@ -309,7 +320,7 @@ with st.form("booking_form", clear_on_submit=True):
         start_time = st.time_input(
             "",
             value=default_start,
-            step=timedelta(minutes=30),  # 30-minute increments only
+            step=timedelta(minutes=30),
             key="appt_start_input"
         )
         st.session_state.appt_start_time_str = start_time.strftime("%H:%M")
@@ -323,12 +334,12 @@ with st.form("booking_form", clear_on_submit=True):
         end_time = st.time_input(
             "",
             value=default_end,
-            step=timedelta(minutes=30),  # 30-minute increments only
+            step=timedelta(minutes=30),
             key="appt_end_input"
         )
         st.session_state.appt_end_time_str = end_time.strftime("%H:%M")
 
-    # Parse values for validation
+    # Parse for validation
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
@@ -338,7 +349,7 @@ with st.form("booking_form", clear_on_submit=True):
         appt_start = time(13, 0)
         appt_end = time(15, 0)
 
-    # Real-time validation
+    # Validation feedback
     if appt_date.weekday() == 6:
         st.error("❌ Closed on Sundays — please choose another day")
     if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
@@ -431,7 +442,6 @@ with st.form("booking_form", clear_on_submit=True):
         ))
         conn.commit()
 
-        # Reset form
         st.session_state.uploaded_files = []
         st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
         st.session_state.appt_start_time_str = "13:00"
@@ -444,16 +454,26 @@ with st.form("booking_form", clear_on_submit=True):
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# FOOTER
+# WHITE FOOTER — EXACTLY AS ORIGINAL
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
 
+# RESTORE NATURAL SCROLL & BOTTOM GLOW — EXACTLY AS ORIGINAL
 st.markdown("""
 <style>
-    .stApp { display: flex !important; flex-direction: column !important; min-height: 100vh !important; }
-    .main { flex: 1 !important; }
+    /* Allow natural scrolling and keep bottom glow visible */
+    .stApp {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100vh !important;
+    }
+    .main {
+        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
+    }
+    /* Only hide Streamlit's default footer, nothing else */
+    footer, [data-testid="stFooter"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
