@@ -255,7 +255,7 @@ calendar_options = {
     "headerToolbar": {
         "left": "prev,next today",
         "center": "title",
-        "right": "dayGridMonth,timeGridWeek,timeGridDay"
+        "right": "dayGridM,timeGridW,timeGridD"
     },
     "slotMinTime": "12:00:00",
     "slotMaxTime": "20:00:00",
