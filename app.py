@@ -95,7 +95,14 @@ st.markdown("""
 <div style="text-align:center;padding:5px 0 30px 0;">
     <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
-    <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
+    
+    <h3 style="margin-top:20px; color:white; font-family: 'Brush Script MT', 'Lucida Calligraphy', 'Great Vibes', cursive; 
+               font-size:2.8rem; font-weight:400; letter-spacing:3px; text-shadow: 
+               0 0 20px #00C853, 
+               0 0 40px #00C853, 
+               0 0 60px #00ff6c, 
+               0 0 80px #00ff6c;
+               animation: glow 4s ease-in-out infinite alternate;">
         Cashin Ink
     </h3>
 </div>
