@@ -173,7 +173,8 @@ if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
 # Default selection: next available day (not Sunday) at 1:00 PM – 3:00 PM
-if "selected_date" not in st.session_state or "start_time" not in st.session_state or "end_time" not in st.session_state:
+# Only set if not already set (prevents resetting on every rerun)
+if "selected_date" not in st.session_state:
     now_local = datetime.now(STUDIO_TZ)
     next_day = now_local + timedelta(days=1)
     days_ahead = 1
