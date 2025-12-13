@@ -474,3 +474,10 @@ st.markdown("""
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
+
+# NATURAL NON-FLOATING FOOTER — JUST SCROLL DOWN TO SEE IT
+st.markdown("""
+<div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:60px 0 40px 0; margin-top:40px;">
+    © 2025 Cashin Ink — Covina, CA
+</div>
+""", unsafe_allow_html=True)
