@@ -14,7 +14,6 @@ from email import encoders
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# YOUR EXACT DESIGN — ONLY PICKERS FIXED + NO FOOTER
 st.markdown("""
 <style>
     .stApp {
@@ -41,7 +40,7 @@ st.markdown("""
     }
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
-        to   { filter: drop-shadow(0 0 45px #00C853); }
+        to   { filter: drop-shadow(0  0 45px #00C853); }
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
 
@@ -70,13 +69,15 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL EVERYTHING AT THE BOTTOM */
-    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
-    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
+    /* ONLY REMOVE STREAMLIT'S FLOATING BAR — KEEP YOUR FOOTER */
+    footer, [data-testid="stFooter"] { visibility: hidden !important; }
+    .css-1d391kg, .css-1v0mbdj { display: none !important; }
+    .block-container { padding-bottom: 0 !important; margin-bottom: 0 !important; }
 </style>
 
 <div style="text-align:center;padding:60px 0 30px 0;">
-    <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png" class="logo-glow" style="width:360px;height:auto;" loading="lazy">
+    <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png"
+         class="logo-glow" style="width:360px;height:auto;" loading="lazy">
     <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
         LA — Premium Tattoo Studio
     </h3>
@@ -128,8 +129,6 @@ if st.query_params.get("success") == "1":
             try:
                 start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
                 end_dt = start_dt + timedelta(hours=2)
-
-                # FIXED: NO F-STRING BACKSLASH ERROR
                 ics_content = """BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
@@ -149,11 +148,10 @@ END:VCALENDAR""".format(
                     name=name, phone=phone, email=email,
                     desc=desc.replace("\n", "\\n")
                 )
-
                 msg = MIMEMultipart()
                 msg['From'] = msg['To'] = ICLOUD_EMAIL
                 msg['Subject'] = f"New Booking: {name}"
-                msg.attach(MIMEText(f"New booking from {name} on {date_str} {time_str}", 'plain'))
+                msg.attach(MIMEText(f"New booking from {name}", 'plain'))
                 part = MIMEBase('text', 'calendar')
                 part.set_payload(ics_content)
                 encoders.encode_base64(part)
@@ -191,22 +189,22 @@ with st.form("booking_form", clear_on_submit=True):
 
     st.markdown("### Select Date & Time")
 
-    # FINAL FIX: SMALL, PERFECT, NEVER CUT OFF PICKERS
+    # FINAL PERFECT PICKERS — NEVER CUT OFF
     dc, tc = st.columns(2)
     with dc:
         components.html(f"""
         <input type="date" id="d" value="{st.session_state.appt_date_str}"
                min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
                max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:100%; height:52px; padding:12px; font-size:16px; background:#1e1e1e; color:white;
+               style="width:100%; height:50px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=60)
+        """, height=58)
     with tc:
         components.html(f"""
         <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
-               style="width:100%; height:52px; padding:12px; font-size:16px; background:#1e1e1e; color:white;
+               style="width:100%; height:50px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=60)
+        """, height=58)
 
     components.html("""
     <script>
@@ -215,7 +213,6 @@ with st.form("booking_form", clear_on_submit=True):
     </script>
     """, height=0)
 
-    # Sync values
     if st.session_state.get("streamlit_component_value"):
         v = st.session_state.streamlit_component_value
         if v.get("date"): st.session_state.appt_date_str = v["date"]
@@ -282,4 +279,11 @@ with st.form("booking_form", clear_on_submit=True):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
+# CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
+
+# YOUR ORIGINAL FOOTER — BACK AND BEAUTIFUL
+st.markdown("""
+<div style="text-align:center; padding:70px 0 30px; color:#444; font-size:15px;">
+    © 2025 Cashin Ink — Covina, CA</div>
+""", unsafe_allow_html=True)
