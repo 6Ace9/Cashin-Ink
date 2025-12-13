@@ -115,50 +115,6 @@ st.markdown("""
     .fc-button-primary { background: #00C853 !important; border: none !important; }
     .fc-button-primary:hover { background: #00ff6c !important; }
     .fc-event { background: #ff4444; border: none; opacity: 0.9; }
-
-    /* Enhanced Mobile fixes for calendar toolbar and layout */
-    @media (max-width: 768px) {
-        /* Stack toolbar vertically */
-        .fc .fc-header-toolbar {
-            flex-direction: column !important;
-            gap: 10px !important;
-            padding: 12px !important;
-            text-align: center !important;
-        }
-        .fc .fc-toolbar-chunk {
-            display: flex !important;
-            justify-content: center !important;
-            width: 100% !important;
-            flex-wrap: wrap !important;
-            gap: 6px !important;
-        }
-
-        /* Smaller buttons and abbreviated text on mobile */
-        .fc .fc-button {
-            padding: 6px 10px !important;
-            font-size: 0.8rem !important;
-            min-width: 40px !important;
-        }
-        .fc .fc-dayGridMonth-button { order: 1; }
-        .fc .fc-timeGridWeek-button { order: 2; }
-        .fc .fc-timeGridDay-button { order: 3; }
-
-        /* Smaller title */
-        .fc .fc-toolbar-title {
-            font-size: 1.1rem !important;
-            margin: 0 !important;
-            width: 100% !important;
-            order: 0 !important;
-        }
-
-        /* Horizontal scroll for timegrid */
-        .fc .fc-scroller.fc-scroller-harness {
-            overflow-x: auto !important;
-        }
-        .fc .fc-timegrid-col {
-            min-width: 60px !important;
-        }
-    }
 </style>
 
 <div style="text-align:center;padding:0px 0 15px 0; margin-top:-20px;">
@@ -205,7 +161,76 @@ if "appt_end_time_str" not in st.session_state:
     st.session_state.appt_end_time_str = "15:00"
 
 # ==================== SUCCESS HANDLING ====================
-# ... (unchanged success handling code remains the same)
+if st.query_params.get("success") == "1":
+    session_id = st.query_params.get("session_id")
+    
+    if session_id:
+        c.execute("SELECT name, email, date, time, files FROM bookings WHERE stripe_session_id = ? AND deposit_paid = 0", (session_id,))
+        booking = c.fetchone()
+        
+        if booking:
+            name, email, appt_date, appt_time, files = booking
+            
+            # Mark as paid
+            c.execute("UPDATE bookings SET deposit_paid = 1 WHERE stripe_session_id = ?", (session_id,))
+            conn.commit()
+            
+            # Send confirmation email
+            if ICLOUD_ENABLED and email:
+                try:
+                    msg = MIMEMultipart()
+                    msg['From'] = ICLOUD_EMAIL
+                    msg['To'] = email
+                    msg['Subject'] = "Cashin Ink — Your Appointment is Confirmed!"
+
+                    body = f"""
+Thank you {name}!
+
+Your tattoo appointment has been successfully booked and your $150 deposit is confirmed.
+
+📅 Date: {appt_date}
+🕒 Time: {appt_time}
+
+Julio will reach out within 24 hours to discuss your design and finalize details.
+
+We can't wait to create something amazing with you!
+
+— Cashin Ink Team
+Covina, CA
+                    """
+                    msg.attach(MIMEText(body, 'plain'))
+
+                    # Attach reference images
+                    if files:
+                        for file_path in files.split(","):
+                            if file_path and os.path.exists(file_path):
+                                with open(file_path, "rb") as attachment:
+                                    part = MIMEBase('application', 'octet-stream')
+                                    part.set_payload(attachment.read())
+                                    encoders.encode_base64(part)
+                                    part.add_header(
+                                        'Content-Disposition',
+                                        f'attachment; filename={os.path.basename(file_path)}'
+                                    )
+                                    msg.attach(part)
+
+                    server = smtplib.SMTP('smtp.mail.me.com', 587)
+                    server.starttls()
+                    server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
+                    server.sendmail(ICLOUD_EMAIL, email, msg.as_string())
+                    server.quit()
+                except Exception as e:
+                    st.warning("Payment confirmed, but confirmation email failed to send. We'll still contact you soon!")
+
+            st.balloons()
+            st.success("Payment Confirmed! Your slot is officially locked. 🎉")
+            st.info("Julio will contact you within 24 hours to discuss your tattoo. Thank you!")
+        else:
+            st.error("Invalid or already processed payment session.")
+    else:
+        st.error("No payment session found.")
+
+    st.stop()
 
 # ==================== AVAILABILITY CALENDAR ====================
 st.markdown("### Check Availability")
@@ -235,19 +260,192 @@ calendar_options = {
     "slotMinTime": "12:00:00",
     "slotMaxTime": "20:00:00",
     "hiddenDays": [0],  # Hide Sundays
-    "height": "auto",
-    "expandRows": True,
+    "height": "600px",
     "editable": False,
     "selectable": False,
 }
 
 cal = calendar(events=events, options=calendar_options, key="availability_cal")
-st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).<br>On mobile: toolbar stacks vertically, buttons are smaller, and you can scroll horizontally to view all days.</small>", unsafe_allow_html=True)
+st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).</small>", unsafe_allow_html=True)
 
 # ==================== MAIN FORM ====================
-# ... (rest of the code unchanged)
+st.markdown("---")
+st.header("Book Your Session — $150 Deposit")
+st.info("Non-refundable • Locks your slot")
 
-# (The rest of the code remains exactly as in the previous version)
+with st.form("booking_form", clear_on_submit=True):
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input("Full Name*", placeholder="John Doe")
+        phone = st.text_input("Phone*", placeholder="(213) 555-0192")
+    with col2:
+        age = st.number_input("Age*", min_value=18, max_value=100, value=25)
+        email = st.text_input("Email*", placeholder="you@gmail.com")
+
+    description = st.text_area("Tattoo Idea* (size, placement, style)", height=140)
+
+    uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
+    if uploaded:
+        st.session_state.uploaded_files = uploaded
+
+    st.markdown("### Select Date & Start/End Time")
+
+    dc, tc1, tc2 = st.columns(3)
+    
+    with dc:
+        st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Date</small>", unsafe_allow_html=True)
+        components.html(f"""
+        <input type="date" id="d" value="{st.session_state.appt_date_str}"
+               min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
+               max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
+               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
+        """, height=72)
+    
+    with tc1:
+        st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
+        components.html(f"""
+        <input type="time" id="start" value="{st.session_state.appt_start_time_str}" step="1800"
+               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
+        """, height=72)
+    
+    with tc2:
+        st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>End Time</small>", unsafe_allow_html=True)
+        components.html(f"""
+        <input type="time" id="end" value="{st.session_state.appt_end_time_str}" step="1800"
+               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
+        """, height=72)
+
+    components.html("""
+    <script>
+        document.getElementById('d')?.addEventListener('change', e => parent.streamlit.setComponentValue({date: e.target.value}));
+        document.getElementById('start')?.addEventListener('change', e => parent.streamlit.setComponentValue({start: e.target.value}));
+        document.getElementById('end')?.addEventListener('change', e => parent.streamlit.setComponentValue({end: e.target.value}));
+    </script>
+    """, height=0)
+
+    if st.session_state.get("streamlit_component_value"):
+        v = st.session_state.streamlit_component_value
+        if v.get("date"):
+            st.session_state.appt_date_str = v["date"]
+        if v.get("start"):
+            st.session_state.appt_start_time_str = v["start"]
+        if v.get("end"):
+            st.session_state.appt_end_time_str = v["end"]
+
+    try:
+        appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
+        appt_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
+        appt_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
+    except:
+        appt_date = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
+        appt_start = time(13, 0)
+        appt_end = time(15, 0)
+
+    # Validation feedback
+    if appt_date.weekday() == 6:
+        st.error("❌ Closed on Sundays — please choose another day")
+    if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
+        st.error("❌ Times must be within 12 PM – 8 PM")
+    if appt_end <= appt_start:
+        st.error("❌ End time must be after start time")
+    if (datetime.combine(appt_date, appt_end) - datetime.combine(appt_date, appt_start)) < timedelta(minutes=30):
+        st.error("❌ Minimum 30 minutes per appointment")
+
+    agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
+
+    _, center, _ = st.columns([1, 2.4, 1])
+    with center:
+        submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
+
+    if submit:
+        # Final validation
+        if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
+            st.error("Please fill all required fields")
+            st.stop()
+        if age < 18:
+            st.error("Must be 18 or older")
+            st.stop()
+        if not agree:
+            st.error("You must agree to the non-refundable deposit")
+            st.stop()
+        if appt_date.weekday() == 6:
+            st.error("Cannot book on Sundays")
+            st.stop()
+        if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
+            st.error("Times must be within studio hours")
+            st.stop()
+        if appt_end <= appt_start:
+            st.error("End time must be after start time")
+            st.stop()
+
+        start_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_start))
+        end_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_end))
+
+        start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
+        end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
+
+        # Conflict detection (overlapping with any confirmed booking)
+        c.execute("""
+            SELECT name FROM bookings 
+            WHERE deposit_paid = 1 
+            AND start_dt < ? AND end_dt > ?
+        """, (end_utc, start_utc))
+        conflict = c.fetchone()
+
+        if conflict:
+            st.error(f"❌ This time overlaps with an existing booking ({conflict[0]}). Please choose another slot.")
+            st.stop()
+
+        # Create booking ID and save files
+        bid = str(uuid.uuid4())
+        os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
+        saved_paths = []
+        for f in st.session_state.uploaded_files:
+            safe_filename = "".join(c for c in f.name if c.isalnum() or c in "._- ")
+            path = f"{UPLOAD_DIR}/{bid}/{safe_filename}"
+            with open(path, "wb") as out:
+                out.write(f.getbuffer())
+            saved_paths.append(path)
+
+        # Create Stripe session
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"Deposit – {name}"},
+                    "unit_amount": 15000
+                },
+                "quantity": 1
+            }],
+            mode="payment",
+            success_url=SUCCESS_URL,
+            cancel_url=CANCEL_URL,
+            metadata={"booking_id": bid},
+            customer_email=email
+        )
+
+        # Save tentative booking
+        c.execute("""INSERT INTO bookings 
+                     (id, name, age, phone, email, description, date, time, start_dt, end_dt, 
+                      deposit_paid, stripe_session_id, files, created_at)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
+            bid, name, age, phone, email, description,
+            str(appt_date), f"{appt_start.strftime('%-I:%M %p')} – {appt_end.strftime('%-I:%M %p')}",
+            start_utc, end_utc,
+            0, session.id, ",".join(saved_paths), datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+
+        # Clear uploaded files
+        st.session_state.uploaded_files = []
+
+        st.success("✅ Slot reserved! Redirecting to secure payment...")
+        st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
+        st.balloons()
 
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
@@ -262,14 +460,16 @@ st.markdown("""
 # RESTORE NATURAL SCROLL & BOTTOM GLOW
 st.markdown("""
 <style>
+    /* Allow natural scrolling and keep bottom glow visible */
     .stApp {
         display: flex !important;
         flex-direction: column !important;
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important;
+        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
     }
+    /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
