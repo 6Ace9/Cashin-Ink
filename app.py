@@ -1,4 +1,4 @@
-# app.py ← FINAL: NO PUBLIC BOOKINGS + NO DUPLICATES + AUTO ADD TO JULIO'S ICLOUD CALENDAR (REAL WORKING METHOD)
+# app.py ← FINAL: NO PUBLIC LIST + NO DUPLICATES + AUTO .ICS EMAIL TO JULIO'S ICLOUD (NO EXTRA PACKAGES)
 import streamlit as st
 import sqlite3
 import os
@@ -9,12 +9,11 @@ import pytz
 import streamlit.components.v1 as components
 import base64
 import requests
-import icalendar
+import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-import smtplib
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
@@ -84,9 +83,9 @@ if "STRIPE_SECRET_KEY" not in st.secrets:
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# ICLOUD EMAIL CREDENTIALS (Julio's @icloud.com account)
-ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]        # e.g., julio@icloud.com
-ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]  # Apple App-Specific Password
+# JULIO'S ICLOUD CREDENTIALS (add to secrets.toml)
+ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]                    # e.g. julio@icloud.com
+ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]      # Apple App-Specific Password
 
 SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
@@ -202,7 +201,6 @@ with st.form("booking_form"):
         start_dt = STUDIO_TZ.localize(start_dt_local)
         end_dt = start_dt + timedelta(hours=2)
 
-        # NO DUPLICATES — BLOCKS ANY OVERLAP
         conflict = c.execute(
             "SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
             (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())
@@ -244,7 +242,7 @@ with st.form("booking_form"):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# SUCCESS: SEND .ICS FILE TO JULIO'S ICLOUD EMAIL → ONE TAP ADDS TO HIS CALENDAR
+# SUCCESS → SEND .ICS FILE TO JULIO'S ICLOUD EMAIL (NO EXTRA LIBRARIES)
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
@@ -257,20 +255,21 @@ if st.query_params.get("success"):
             start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
             end_dt = start_dt + timedelta(hours=2)
 
-            cal = icalendar.Calendar()
-            cal.add('prodid', '-//Cashin Ink Booking//')
-            cal.add('version', '2.0')
-
-            event = icalendar.Event()
-            event.add('summary', f"Tattoo – {client_name}")
-            event.add('dtstart', start_dt)
-            event.add('dtend', end_dt)
-            event.add('location', "Cashin Ink Studio – Covina, CA")
-            event.add('description', f"Client: {client_name}\nPhone: {phone}\nEmail: {client_email}\nIdea: {desc}\nDeposit: PAID $150")
-            event.add('uid', f"cashinink-{bid}@cashinink.com")
-            cal.add_component(event)
-
-            ics_bytes = cal.to_ical()
+            # Manual .ics creation (no external package)
+            ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Cashin Ink//EN
+BEGIN:VEVENT
+UID:cashinink-{bid}@cashinink.com
+DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}
+DTSTART:{start_dt.strftime("%Y%m%dT%H0000")}
+DTEND:{end_dt.strftime("%Y%m%dT%H0000")}
+SUMMARY:Tattoo – {client_name}
+LOCATION:Cashin Ink Studio – Covina, CA
+DESCRIPTION:Client: {client_name}\\nPhone: {phone}\\nEmail: {client_email}\\nIdea: {desc.replace(chr(10), '\\n')}\\nDeposit: PAID $150
+END:VEVENT
+END:VCALENDAR
+"""
 
             msg = MIMEMultipart()
             msg['From'] = ICLOUD_EMAIL
@@ -281,7 +280,7 @@ if st.query_params.get("success"):
             msg.attach(MIMEText(body, 'plain'))
 
             part = MIMEBase('text', 'calendar; name="booking.ics"')
-            part.set_payload(ics_bytes)
+            part.set_payload(ics_content)
             encoders.encode_base64(part)
             part.add_header('Content-Disposition', 'attachment; filename="booking.ics"')
             msg.attach(part)
