@@ -160,6 +160,8 @@ with st.form("booking_form", clear_on_submit=True):
 
     st.markdown("### Select Date & Time")
 
+    st.markdown("<style>.column > div > div {padding-right: 0px !important;}</style>", unsafe_allow_html=True)
+
     dc, tc = st.columns([1, 1])  # forces perfectly equal width + removes hidden padding
     with dc:
         components.html(f"""
