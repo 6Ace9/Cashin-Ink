@@ -45,7 +45,7 @@ st.markdown("""
             inset 0 0 20px rgba(0, 255, 100, 0.1);
         margin: 20px auto;
         max-width: 960px;
-        padding: 50px;
+        padding: 70px;
         flex: 1;
     }
 
