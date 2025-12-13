@@ -69,12 +69,9 @@ st.markdown("""
 
     h1,h2,h3,h4 { color: #00ff88 !important; text-align: center; font-weight: 500; }
 
-    /* KILL ALL BOTTOM FLOAT & FOOTER — 100% GONE */
-    footer { display: none !important; }
-    [data-testid="stFooter"] { display: none !important; }
-    .css-1d391kg, .css-1v0mbdj { display: none !important; }
+    /* KILL ALL BOTTOM FLOAT */
+    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display: none !important; }
     .block-container { padding-bottom: 0 !important; margin-bottom: 0 !important; }
-    section[data-testid="stSidebar"] { display: none; }
 </style>
 
 <div style="text-align:center; padding:60px 0 30px 0;">
@@ -88,7 +85,6 @@ st.markdown("""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# ==================== CONFIG ====================
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -116,11 +112,12 @@ if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = [
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 
-# SUCCESS
+# SUCCESS PAGE
 if st.query_params.get("success") == "1":
     st.balloons()
     st.success("Payment Confirmed! Your slot is locked.")
     st.info("Julio will contact you soon.")
+
     if ICLOUD_ENABLED:
         booking = c.execute("SELECT name,date,time,phone,email,description,id FROM bookings WHERE deposit_paid=0 ORDER BY created_at DESC LIMIT 1").fetchone()
         if booking:
@@ -128,18 +125,28 @@ if st.query_params.get("success") == "1":
             try:
                 start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
                 end_dt = start_dt + timedelta(hours=2)
-                ics_content = f"""BEGIN:VCALENDAR
+
+                # FIXED: NO BACKSLASH IN F-STRING
+                ics_content = """BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 UID:cashinink-{bid}
-DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}
-DTSTART:{start_dt.strftime("%Y%m%dT%H%M00")}
-DTEND:{end_dt.strftime("%Y%m%dT%H%M00")}
+DTSTAMP:{now}
+DTSTART:{start}
+DTEND:{end}
 SUMMARY:Tattoo - {name}
 LOCATION:Cashin Ink Studio, Covina CA
-DESCRIPTION:Client: {name}\\nPhone: {phone}\\nEmail: {email}\\nIdea: {desc.replace(chr(10),"\\n")}\\nDeposit: PAID
+DESCRIPTION:Client: {name}\\nPhone: {phone}\\nEmail: {email}\\nIdea: {desc}\\nDeposit: PAID
 END:VEVENT
-END:VCALENDAR"""
+END:VCALENDAR""".format(
+                    bid=bid,
+                    now=datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
+                    start=start_dt.strftime("%Y%m%dT%H%M00"),
+                    end=end_dt.strftime("%Y%m%dT%H%M00"),
+                    name=name, phone=phone, email=email,
+                    desc=desc.replace("\n", "\\n")
+                )
+
                 msg = MIMEMultipart()
                 msg['From'] = msg['To'] = ICLOUD_EMAIL
                 msg['Subject'] = f"New Booking: {name}"
@@ -181,37 +188,34 @@ with st.form("booking_form", clear_on_submit=True):
 
     st.markdown("### Select Date & Time")
 
-    # ONLY THESE TWO ARE SMALLER NOW — NOTHING ELSE CHANGED
+    # SMALLER PICKERS — ONLY CHANGE
     dc, tc = st.columns([1.7, 1])
     with dc:
         components.html(f"""
-        <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
+        <input type="date" id="d" value="{st.session_state.appt_date_str}"
                min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
                max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:100%; padding:12px; font-size:15px; background:#1e1e1e; color:white; 
+               style="width:100%; padding:11px; font-size:15px; background:#1e1e1e; color:white; 
                       border:2px solid #00C853; border-radius:12px; text-align:center;">
         """, height=65)
-
     with tc:
         components.html(f"""
-        <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600"
-               style="width:100%; padding:12px; font-size:15px; background:#1e1e1e; color:white; 
+        <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
+               style="width:100%; padding:11px; font-size:15px; background:#1e1e1e; color:white; 
                       border:2px solid #00C853; border-radius:12px; text-align:center;">
         """, height=65)
 
     components.html("""
     <script>
-        const d = document.getElementById('datePicker');
-        const t = document.getElementById('timePicker');
-        if (d) d.onchange = () => parent.streamlit.setComponentValue({date: d.value});
-        if (t) t.onchange = () => parent.streamlit.setComponentValue({time: t.value});
+        document.getElementById('d')?.addEventListener('change', e => parent.streamlit.setComponentValue({date: e.target.value}));
+        document.getElementById('t')?.addEventListener('change', e => parent.streamlit.setComponentValue({time: e.target.value}));
     </script>
     """, height=0)
 
-    picker = st.session_state.get("streamlit_component_value", {})
-    if isinstance(picker, dict):
-        if picker.get("date"): st.session_state.appt_date_str = picker["date"]
-        if picker.get("time"): st.session_state.appt_time_str = picker["time"]
+    if st.session_state.get("streamlit_component_value"):
+        v = st.session_state.streamlit_component_value
+        if v.get("date"): st.session_state.appt_date_str = v["date"]
+        if v.get("time"): st.session_state.appt_time_str = v["time"]
 
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
@@ -231,9 +235,9 @@ with st.form("booking_form", clear_on_submit=True):
 
     if submit:
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Invalid date/time"); st.stop()
-        if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Please fill all fields"); st.stop()
+            st.error("Invalid time"); st.stop()
+        if not all([name, phone, email, description, agree]) or age < 18:
+            st.error("Fill all fields"); st.stop()
 
         start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
         end_dt = start_dt + timedelta(hours=2)
@@ -270,11 +274,8 @@ with st.form("booking_form", clear_on_submit=True):
         ))
         conn.commit()
 
-        st.success("Redirecting to payment…")
+        st.success("Redirecting…")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
 st.markdown("</div>", unsafe_allow_html=True)
-
-# NO FLOATING FOOTER AT ALL
-st.markdown("<div style='height:60px;'></div>", unsafe_allow_html=True)
