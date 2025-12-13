@@ -1,4 +1,4 @@
-# app.py ← FINAL: NO PUBLIC LIST + NO DUPLICATES + AUTO .ICS EMAIL TO JULIO'S ICLOUD (100% WORKING)
+# app.py ← FINAL: WORKS EVEN WITHOUT SECRETS + .ICS EMAIL TO JULIO'S ICLOUD + NO DUPLICATES + NO PUBLIC LIST
 import streamlit as st
 import sqlite3
 import os
@@ -79,13 +79,20 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/New_York")
 
 if "STRIPE_SECRET_KEY" not in st.secrets:
-    st.error("Missing STRIPE_SECRET_KEY")
+    st.error("Missing STRIPE_SECRET_KEY in secrets")
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# JULIO'S ICLOUD CREDENTIALS
-ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
-ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
+# JULIO'S ICLOUD CREDENTIALS — SAFE CHECK (no crash if missing)
+try:
+    ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
+    ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
+    ICLOUD_ENABLED = True
+except:
+    ICLOUD_EMAIL = None
+    ICLOUD_APP_PASSWORD = None
+    ICLOUD_ENABLED = False
+    st.warning("iCloud calendar notifications disabled — add ICLOUD_EMAIL and ICLOUD_APP_PASSWORD to secrets to enable")
 
 SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
@@ -242,12 +249,12 @@ with st.form("booking_form"):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# SUCCESS → SEND .ICS TO JULIO'S ICLOUD EMAIL (FIXED: no f-string backslash error)
+# SUCCESS → SEND .ICS TO JULIO'S ICLOUD EMAIL (ONLY IF CREDENTIALS EXIST)
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
 
-    if ICLOUD_EMAIL and ICLOUD_APP_PASSWORD:
+    if ICLOUD_ENABLED:
         latest = c.execute("SELECT name, date, time, phone, email, description FROM bookings ORDER BY created_at DESC LIMIT 1").fetchone()
         if latest:
             client_name, date_str, time_str, phone, client_email, desc = latest
@@ -255,7 +262,6 @@ if st.query_params.get("success"):
             start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
             end_dt = start_dt + timedelta(hours=2)
 
-            # Manual .ics creation using .format() to avoid backslash issue
             ics_content = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Cashin Ink//EN
@@ -300,8 +306,9 @@ END:VCALENDAR
                 server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 server.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 server.quit()
-            except Exception as e:
-                pass  # Silent fail
+                st.success("Calendar event sent to Julio's iPhone!")
+            except:
+                st.warning("Failed to send calendar event (check credentials)")
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
