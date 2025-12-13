@@ -456,14 +456,16 @@ st.markdown("""
 # RESTORE NATURAL SCROLL & BOTTOM GLOW
 st.markdown("""
 <style>
+    /* Allow natural scrolling and keep bottom glow visible */
     .stApp {
         display: flex !important;
         flex-direction: column !important;
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important;
+        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
     }
+    /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
