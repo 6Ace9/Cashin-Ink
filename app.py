@@ -160,7 +160,7 @@ with st.form("booking_form", clear_on_submit=True):
 
     st.markdown("### Select Date & Time")
 
-    dc, tc = st.columns(2)
+    dc, tc = st.columns([1, 1])  # forces perfectly equal width + removes hidden padding
     with dc:
         components.html(f"""
         <input type="date" id="d" value="{st.session_state.appt_date_str}"
