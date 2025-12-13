@@ -279,15 +279,37 @@ END:VCALENDAR""".format(
                 st.warning("Failed to send .ics (check credentials)")
 
 st.markdown("</div>", unsafe_allow_html=True)
+# === REPLACE YOUR CURRENT FOOTER WITH THIS (removes scroll space forever) ===
 st.markdown("""
-<div style="text-align:center;padding:40px 0 30px;color:#666;font-size:14px;">
+<div style="
+    text-align:center;
+    padding:30px 0 20px 0;
+    color:#666;
+    font-size:14px;
+    margin-top: 40px;
+    width: 100%;
+    position: relative;
+">
     © 2025 Cashin Ink — Covina, CA
 </div>
 
+<!-- KILL ALL EXTRA SPACE AFTER FOOTER -->
 <style>
-    /* DIE, EMPTY SPACE, DIE */
-    .main > .block-container { padding-bottom: 0 !important; }
-    footer { visibility: hidden !important; }
-    section.main { margin-bottom: -100px !important; }
+    /* Remove Streamlit's default bottom padding/margin */
+    .block-container {
+        padding-bottom: 1rem !important;
+    }
+    .main > div {
+        padding-bottom: 0px !important;
+    }
+    /* Force footer to bottom and kill scroll overflow */
+    footer {visibility: hidden !important;}
+    .stApp {
+        overflow: hidden !important;
+    }
+    /* Final nuclear option – cuts off any remaining space */
+    section[data-testid="stAppViewContainer"] > div:first-child {
+        margin-bottom: -100px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
