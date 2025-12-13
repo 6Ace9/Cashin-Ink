@@ -385,10 +385,19 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# FINAL NO BOTTOM SPACE
+# RESTORE NATURAL SCROLL & BOTTOM GLOW
 st.markdown("""
 <style>
-    .stApp { padding-bottom: 0px !important; margin-bottom: 0px !important; }
-    body { margin: 0; padding: 0; }
+    /* Allow natural scrolling and keep bottom glow visible */
+    .stApp {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100vh !important;
+    }
+    .main {
+        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
+    }
+    /* Only hide Streamlit's default footer, nothing else */
+    footer, [data-testid="stFooter"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
