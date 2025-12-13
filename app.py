@@ -11,13 +11,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+import re
+from pathlib import Path
 
-st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
+st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="💉")
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
-
     html, body, [class*="css"]  { height: 100%; margin: 0; padding: 0; }
     .stApp {
         background: url("https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/background.png")
@@ -45,9 +45,9 @@ st.markdown("""
             0 0 30px rgba(0, 200, 83, 0.4),
             0 0 60px rgba(0, 255, 100, 0.25),
             inset 0 0 20px rgba(0, 255, 100, 0.1);
-        margin:  60px auto 20px auto;
+        margin: 20px auto;
         max-width: 960px;
-        padding: 25px;
+        padding: 50px;
         flex: 1;
     }
 
@@ -61,21 +61,6 @@ st.markdown("""
         to   { filter: drop-shadow(0 0 45px #00C853); }
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
-
-    .cashin-header {
-        margin-top: 20px;
-        color: #000000 !important;
-        font-family: 'Dancing Script', cursive !important;
-        font-weight: 700;
-        font-size: 3.2rem !important;
-        letter-spacing: 3px;
-        animation: glow 4s ease-in-out infinite alternate;
-        text-shadow: 
-            0 0 10px #00C853,
-            0 0 20px #00C853,
-            0 0 40px #00ff6c,
-            0 0 60px #00ff6c;
-    }
 
     .stTextInput>div>div>input,
     .stTextArea>div>div>textarea,
@@ -109,10 +94,12 @@ st.markdown("""
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 </style>
 
-<div style="text-align:center;padding:0px 0 15px 0; margin-top:-20px;">
-    <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
+<div style="text-align:center;padding:60px 0 30px 0;">
+    <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
-    <h3 class="cashin-header">Cashin Ink</h3>
+    <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
+        LA — Premium Tattoo Studio
+    </h3>
 </div>
 
 <div class="main">
@@ -125,6 +112,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/Los_Angeles")
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
+# Use a fixed Stripe Payment Link (create once in Stripe Dashboard → $150 fixed price)
+# Replace with your actual Payment Link URL
+PAYMENT_LINK = "https://buy.stripe.com/your_fixed_150_deposit_link_here"
+
 ICLOUD_ENABLED = "ICLOUD_EMAIL" in st.secrets and "ICLOUD_APP_PASSWORD" in st.secrets
 if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
@@ -135,29 +126,42 @@ CANCEL_URL = "https://cashin-ink.streamlit.app"
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
+
+# Create table and unique index to prevent overlapping bookings
 c.execute('''CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY, name TEXT, age INTEGER, phone TEXT, email TEXT, description TEXT,
     date TEXT, time TEXT, start_dt TEXT, end_dt TEXT,
     deposit_paid INTEGER DEFAULT 0, stripe_session_id TEXT, files TEXT, created_at TEXT
 )''')
+c.execute('''CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_slot 
+             ON bookings(start_dt, end_dt)''')
 conn.commit()
 
-if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
+# Session state initialization
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state:
+    st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state:
+    st.session_state.appt_time_str = "13:00"
 
 # SUCCESS PAGE
 if st.query_params.get("success") == "1":
     st.balloons()
     st.success("Payment Confirmed! Your slot is locked.")
     st.info("Julio will contact you within 24 hours. Thank you!")
-    # ... (your calendar code — already perfect)
     st.stop()
 
 # MAIN FORM
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
 st.info("Non-refundable • Locks your slot")
+
+def sanitize_filename(filename: str) -> str:
+    """Strictly sanitize uploaded filenames to prevent path traversal and injection"""
+    filename = re.sub(r'[^\w\.\-]', '_', filename)  # Only alphanum, _, ., -
+    filename = re.sub(r'\.+', '.', filename)       # Remove multiple dots
+    return filename[:100]  # Limit length
 
 with st.form("booking_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
@@ -171,7 +175,8 @@ with st.form("booking_form", clear_on_submit=True):
     description = st.text_area("Tattoo Idea* (size, placement, style)", height=140)
 
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded: st.session_state.uploaded_files = uploaded
+    if uploaded:
+        st.session_state.uploaded_files = uploaded
 
     st.markdown("### Select Date & Time")
 
@@ -200,8 +205,10 @@ with st.form("booking_form", clear_on_submit=True):
 
     if st.session_state.get("streamlit_component_value"):
         v = st.session_state.streamlit_component_value
-        if v.get("date"): st.session_state.appt_date_str = v["date"]
-        if v.get("time"): st.session_state.appt_time_str = v["time"]
+        if v.get("date"):
+            st.session_state.appt_date_str = v["date"]
+        if v.get("time"):
+            st.session_state.appt_time_str = v["time"]
 
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
@@ -210,8 +217,10 @@ with st.form("booking_form", clear_on_submit=True):
         appt_date = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    if appt_date.weekday() == 6: st.error("Closed on Sundays")
-    if appt_time.hour < 12 or appt_time.hour > 20: st.error("Open 12 PM – 8 PM only")
+    if appt_date.weekday() == 6:
+        st.error("Closed on Sundays")
+    if appt_time.hour < 12 or appt_time.hour > 20:
+        st.error("Open 12 PM – 8 PM only")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -220,61 +229,73 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
+        # Validation
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Invalid date/time"); st.stop()
+            st.error("Invalid date/time")
+            st.stop()
         if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Please fill all fields"); st.stop()
+            st.error("Please fill all required fields and agree to the deposit")
+            st.stop()
 
-        start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
-        end_dt = start_dt + timedelta(hours=2)
+        start_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
+        end_dt_local = start_dt_local + timedelta(hours=2)
+        start_dt_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
+        end_dt_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
-        conflict = c.execute("SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
-                          (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())).fetchone()
+        # Check for conflict
+        conflict = c.execute(
+            "SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
+            (end_dt_utc, start_dt_utc)
+        ).fetchone()
         if conflict:
-            st.error(f"Slot taken by {conflict[0]}"); st.stop()
+            st.error(f"Slot taken by {conflict[0]}")
+            st.stop()
 
         bid = str(uuid.uuid4())
-        os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
+        booking_dir = f"{UPLOAD_DIR}/{bid}"
+        os.makedirs(booking_dir, exist_ok=True)
         paths = []
+
         for f in st.session_state.uploaded_files:
-            path = f"{UPLOAD_DIR}/{bid}/{f.name}"
-            with open(path, "wb") as out: out.write(f.getbuffer())
+            safe_name = sanitize_filename(f.name)
+            path = f"{booking_dir}/{safe_name}"
+            Path(path).write_bytes(f.getbuffer())
             paths.append(path)
 
-        session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
-            mode="payment",
-            success_url=SUCCESS_URL,
-            cancel_url=CANCEL_URL,
-            metadata={"booking_id": bid},
-            customer_email=email
-        )
+        files_str = ",".join(paths)
 
-        c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            bid, name, age, phone, email, description,
-            str(appt_date), appt_time.strftime("%-I:%M %p"),
-            start_dt.astimezone(pytz.UTC).isoformat(),
-            end_dt.astimezone(pytz.UTC).isoformat(),
-            0, session.id, ",".join(paths), datetime.utcnow().isoformat()
-        ))
-        conn.commit()
+        # Insert booking (will fail if race condition occurs due to unique index)
+        try:
+            c.execute("""INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
+                bid, name, age, phone, email, description,
+                str(appt_date), appt_time.strftime("%-I:%M %p"),
+                start_dt_utc, end_dt_utc,
+                0, None, files_str, datetime.utcnow().isoformat()
+            ))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            st.error("Slot was just taken by someone else! Please choose another time.")
+            st.stop()
 
-        st.success("Redirecting to payment…")
-        st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
-        st.balloons()
+        # Redirect to fixed Stripe Payment Link with prefilled data
+        payment_url = f"{PAYMENT_LINK}?prefilled_email={email}&client_reference_id={bid}"
+
+        with st.spinner("Securing your slot..."):
+            st.success("Slot reserved! Redirecting to secure payment…")
+            st.markdown(f'<meta http-equiv="refresh" content="2;url={payment_url}">', unsafe_allow_html=True)
+            st.balloons()
 
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# WHITE FOOTER — NO SPACE BELOW
+# WHITE FOOTER
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
 
-# FINAL KILL SWITCH — 100% NO BOTTOM SPACE
+# FINAL NO BOTTOM SPACE
 st.markdown("""
 <style>
     .stApp { padding-bottom: 0px !important; margin-bottom: 0px !important; }
