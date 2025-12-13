@@ -1,4 +1,4 @@
-# app.py ← FINAL: ORIGINAL LOOK + NOW WORKS PERFECTLY ON DESKTOP TOO
+# app.py  ← FINAL: CLEAN & PERFECT — FULL VERSION WITH GITHUB URL SUPPORT
 import streamlit as st
 import sqlite3
 import os
@@ -8,29 +8,35 @@ import uuid
 import pytz
 import streamlit.components.v1 as components
 import base64
-import requests
+import requests  # ← NEW (for loading GitHub URL images)
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== IMAGE LOADER (GitHub + Local) ====================
+# Load images (supports local files AND GitHub raw URLs)
 def img_b64(path):
     try:
-        if path.startswith("http"):
-            data = requests.get(path, timeout=10).content
+        if path.startswith("http://") or path.startswith("https://"):
+            data = requests.get(path).content
         else:
             if os.path.exists(path):
                 with open(path, "rb") as f:
                     data = f.read()
             else:
                 return None
+
         return base64.b64encode(data).decode()
-    except:
+    except Exception as e:
+        st.write("Image load error:", e)
         return None
 
-# YOUR GITHUB RAW URLs HERE
-logo_b64 = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/logo.png")
-bg_b64   = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
 
+# ↓↓↓ PUT YOUR RAW GITHUB URLS HERE ↓↓↓
+logo_b64 = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/logo.png")
+bg_b64 = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
+# ↑↑↑ REPLACE WITH YOUR REAL URLs ↑↑↑
+
+
+# UI elements
 logo_html = (
     f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">'
     if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
@@ -48,6 +54,7 @@ st.markdown(f"""
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
+    .block-container {{ padding-bottom: 0px !important; }}
     footer {{ visibility: hidden !important; }}
 </style>
 
@@ -58,7 +65,8 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# ==================== DB & STRIPE ====================
+
+# DB
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -81,10 +89,10 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state
+# session state
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
+if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 
 st.markdown("---")
 st.header("Book Sessions — $150 Deposit")
@@ -105,75 +113,50 @@ with st.form("booking_form"):
 
     st.markdown("### Date & Time")
     dc, tc = st.columns([2,1])
-
-    # DATE PICKER — BIG & BEAUTIFUL (now works on desktop!)
+    
     with dc:
         st.markdown("**Select Date**")
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
-            <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
+            <input type="date" value="{st.session_state.appt_date_str}"
                    min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
                    max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
-                   style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
-                          height:56px;width:220px;font-size:20px;text-align:center;">
+                   readonly style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
+                          height:56px;width:220px;font-size:20px;text-align:center;cursor:pointer;"
+                   onclick="this.showPicker?.()">
         </div>
         <script>
-            const dateInput = document.getElementById('datePicker');
-            // Force open picker on click AND remove readonly so desktop works
-            dateInput.removeAttribute('readonly');
-            dateInput.showPicker && dateInput.addEventListener('click', () => dateInput.showPicker());
+            const d = document.querySelector('input[type="date"]');
+            d.onclick = () => d.showPicker?.();
+            d.ontouchstart = () => d.showPicker?.();
         </script>
-        """, height=180)
+        """, height=160)
 
-    # TIME PICKER — BIG & BEAUTIFUL (now works on desktop!)
     with tc:
         st.markdown("**Start Time**")
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
-            <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600"
+            <input type="time" value="{st.session_state.appt_time_str}" step="3600" readonly
                    style="background:#1e1e1e;color:white;border:2px solid #00C853;border-radius:8px;
-                          height:56px;width:180px;font-size:22px;text-align:center;">
+                          height:56px;width:180px;font-size:22px;text-align:center;cursor:pointer;"
+                   onclick="this.showPicker?.()">
         </div>
         <script>
-            const timeInput = document.getElementById('timePicker');
-            timeInput.removeAttribute('readonly');
-            timeInput.showPicker && timeInput.addEventListener('click', () => timeInput.showPicker());
+            const t = document.querySelector('input[type="time"]');
+            t.onclick = () => t.showPicker?.();
+            t.ontouchstart = () => t.showPicker?.();
         </script>
-        """, height=180)
+        """, height=160)
 
-    # Capture values after render
-    appt_date_str = st.session_state.get("appt_date_str", (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d"))
-    appt_time_str = st.session_state.get("appt_time_str", "13:00")
-
-    # Use JavaScript to sync values back to Streamlit session state
-    components.html(f"""
-    <script>
-        const dateInput = document.getElementById('datePicker');
-        const timeInput = document.getElementById('timePicker');
-
-        dateInput.addEventListener('change', function() {{
-            parent.streamlit.setComponentValue({{date: this.value}});
-        }});
-        timeInput.addEventListener('change', function() {{
-            parent.streamlit.setComponentValue({{time: this.value}});
-        }});
-    </script>
-    """, height=0)
-
-    # Get updated values from frontend
-    picker_value = st.session_state.get("streamlit_component_value", {})
-    if isinstance(picker_value, dict):
-        if picker_value.get("date"):
-            st.session_state.appt_date_str = picker_value["date"]
-        if picker_value.get("time"):
-            st.session_state.appt_time_str = picker_value["time"]
-
-    # Parse final values
+    # Parse Date/Time
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-        appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
     except:
         appt_date = datetime.today() + timedelta(days=1)
+
+    try:
+        appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+    except:
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
     if appt_date.weekday() == 6:
@@ -216,7 +199,14 @@ with st.form("booking_form"):
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
-                line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
+                line_items=[{
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {"name": f"Deposit – {name}"},
+                        "unit_amount": 15000
+                    },
+                    "quantity": 1
+                }],
                 mode="payment",
                 success_url=SUCCESS_URL,
                 cancel_url=CANCEL_URL,
@@ -237,16 +227,21 @@ with st.form("booking_form"):
             st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
             st.balloons()
 
-# Success & Admin (unchanged)
+# Payment Success
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
 
+# Admin view
 with st.expander("Studio — Upcoming Bookings"):
     for row in c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall():
         status = "PAID" if row[4] else "PENDING"
         color = "#00C853" if row[4] else "#FF9800"
-        st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color}'>{status}</span>", unsafe_allow_html=True)
+        st.markdown(
+            f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — "
+            f"<span style='color:{color}'>{status}</span>",
+            unsafe_allow_html=True
+        )
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
