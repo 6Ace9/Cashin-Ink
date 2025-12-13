@@ -157,26 +157,37 @@ with st.form("booking_form", clear_on_submit=True):
 
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
     if uploaded: st.session_state.uploaded_files = uploaded
+st.markdown("### Select Date & Time")
 
-    st.markdown("### Select Date & Time")
+# NUKE THE HIDDEN PADDING THAT CAUSES THE RIGHT CUTOFF
+st.markdown("""
+<style>
+    /* Kill Streamlit's secret right padding in columns on mobile */
+    [data-testid="column"] > div:first-child { padding-right: 4px !important; }
+    [data-testid="column"] > div:last-child  { padding-left:  4px !important; }
 
-    st.markdown("<style>.column > div > div {padding-right: 0px !important;}</style>", unsafe_allow_html=True)
+    /* Make sure the iframe doesn't clip anything */
+    iframe { overflow: visible !important; }
+</style>
+""", unsafe_allow_html=True)
 
-    dc, tc = st.columns([1, 1])  # forces perfectly equal width + removes hidden padding
-    with dc:
-        components.html(f"""
-        <input type="date" id="d" value="{st.session_state.appt_date_str}"
-               min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
-               max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:100%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
-                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box; margin-right: -1px;">
-        """, height=100)
-    with tc:
-        components.html(f"""
-        <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
-               style="width:100%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
-                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box; margin-right: -1px;">
-        """, height=100)
+# ←←← ONLY CHANGE THESE TWO LINES (add width:98% instead of 100%)
+dc, tc = st.columns(2)
+with dc:
+    components.html(f"""
+    <input type="date" id="d" value="{st.session_state.appt_date_str}"
+           min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
+           max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
+           style="width:98%; height:52px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+                  border:2px solid #00C853; border-radius:12px; box-sizing:border-box; display:block; margin:0 auto;">
+    """, height=80)
+
+with tc:
+    components.html(f"""
+    <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
+           style="width:98%; height:52px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+                  border:2px solid #00C853; border-radius:12px; box-sizing:border-box; display:block; margin:0 auto;">
+    """, height=80)
 
     components.html("""
     <script>
