@@ -109,7 +109,7 @@ st.markdown("""
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 </style>
 
-<div style="text-align:center;padding:5px 0 30px 0;">
+<div style="text-align:center;padding:0px 0 15px 0; margin-top:-20px;">
     <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
     <h3 class="cashin-header">Cashin Ink</h3>
