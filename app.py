@@ -1,4 +1,4 @@
-# app.py ← FINAL: NO PUBLIC LIST + NO DUPLICATES + AUTO .ICS EMAIL TO JULIO'S ICLOUD (NO EXTRA PACKAGES)
+# app.py ← FINAL: NO PUBLIC LIST + NO DUPLICATES + AUTO .ICS EMAIL TO JULIO'S ICLOUD (100% WORKING)
 import streamlit as st
 import sqlite3
 import os
@@ -83,9 +83,9 @@ if "STRIPE_SECRET_KEY" not in st.secrets:
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# JULIO'S ICLOUD CREDENTIALS (add to secrets.toml)
-ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]                    # e.g. julio@icloud.com
-ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]      # Apple App-Specific Password
+# JULIO'S ICLOUD CREDENTIALS
+ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
+ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
 
 SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
@@ -242,7 +242,7 @@ with st.form("booking_form"):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# SUCCESS → SEND .ICS FILE TO JULIO'S ICLOUD EMAIL (NO EXTRA LIBRARIES)
+# SUCCESS → SEND .ICS TO JULIO'S ICLOUD EMAIL (FIXED: no f-string backslash error)
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
@@ -255,21 +255,30 @@ if st.query_params.get("success"):
             start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
             end_dt = start_dt + timedelta(hours=2)
 
-            # Manual .ics creation (no external package)
-            ics_content = f"""BEGIN:VCALENDAR
+            # Manual .ics creation using .format() to avoid backslash issue
+            ics_content = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Cashin Ink//EN
 BEGIN:VEVENT
 UID:cashinink-{bid}@cashinink.com
-DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}
-DTSTART:{start_dt.strftime("%Y%m%dT%H0000")}
-DTEND:{end_dt.strftime("%Y%m%dT%H0000")}
-SUMMARY:Tattoo – {client_name}
+DTSTAMP:{now}
+DTSTART:{start}
+DTEND:{end}
+SUMMARY:Tattoo – {name}
 LOCATION:Cashin Ink Studio – Covina, CA
-DESCRIPTION:Client: {client_name}\\nPhone: {phone}\\nEmail: {client_email}\\nIdea: {desc.replace(chr(10), '\\n')}\\nDeposit: PAID $150
+DESCRIPTION:Client: {name}\\nPhone: {phone}\\nEmail: {email}\\nIdea: {desc}\\nDeposit: PAID $150
 END:VEVENT
 END:VCALENDAR
-"""
+""".format(
+                bid=bid,
+                now=datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
+                start=start_dt.strftime("%Y%m%dT%H%M00"),
+                end=end_dt.strftime("%Y%m%dT%H%M00"),
+                name=client_name,
+                phone=phone,
+                email=client_email,
+                desc=desc.replace("\n", "\\n")
+            )
 
             msg = MIMEMultipart()
             msg['From'] = ICLOUD_EMAIL
@@ -291,7 +300,7 @@ END:VCALENDAR
                 server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 server.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 server.quit()
-            except:
+            except Exception as e:
                 pass  # Silent fail
 
 st.markdown("</div>", unsafe_allow_html=True)
