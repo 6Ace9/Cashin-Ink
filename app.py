@@ -1,4 +1,4 @@
-# app.py ← FINAL: 100% FIXED "Missing Submit Button" + EXACT ORIGINAL LOOK & FULL FUNCTIONALITY
+# app.py ← FINAL: WIDE RECTANGULAR BUTTON (MOBILE & DESKTOP CONSISTENT) + NO "Missing Submit Button" ERROR
 import streamlit as st
 import sqlite3
 import os
@@ -46,8 +46,25 @@ st.markdown(f"""
     .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
-    .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
-    .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
+    .stButton>button {{ 
+        background:#00C853 !important; 
+        color:black !important; 
+        font-weight:bold; 
+        border-radius:8px; 
+        padding:18px 40px !important; 
+        font-size:20px !important;
+        height: auto !important;
+    }}
+    /* Make button wide and rectangular on both mobile & desktop */
+    .wide-centered-button button {{
+        width: 100% !important;
+        max-width: 600px !important;
+    }}
+    .wide-centered-button {{
+        display: flex;
+        justify-content: center;
+        margin-top: 30px;
+    }}
     footer {{ visibility: hidden !important; }}
 </style>
 
@@ -166,7 +183,6 @@ with st.form("booking_form"):
         appt_date = (datetime.today() + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    # Validation messages (these do NOT stop the form rendering)
     if appt_date.weekday() == 6:
         st.error("Closed on Sundays — please choose another date")
     if appt_time.hour < 12 or appt_time.hour > 20:
@@ -174,17 +190,12 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # THE ONLY RELIABLE FIX THAT KEEPS EXACT ORIGINAL LOOK
-    # We use pure CSS centering via columns + use_container_width=True
-    st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT", use_container_width=True)
+    # WIDE RECTANGULAR CENTERED BUTTON — CONSISTENT ON MOBILE & DESKTOP
+    st.markdown("<div class='wide-centered-button'>", unsafe_allow_html=True)
+    submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Only run submission logic if button pressed AND validations pass
     if submit:
-        # Re-check validations on submit
         if appt_date.weekday() == 6:
             st.error("Closed on Sundays")
             st.stop()
@@ -239,7 +250,7 @@ with st.form("booking_form"):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# Success message outside form
+# Success message
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
