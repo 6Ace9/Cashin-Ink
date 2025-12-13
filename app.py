@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 import os
 import stripe
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import uuid
 import pytz
 import streamlit.components.v1 as components
@@ -11,6 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from streamlit_calendar import calendar  # NEW IMPORT
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="💉")
 
@@ -107,6 +108,13 @@ st.markdown("""
     .block-container { padding-bottom:0!important; margin-bottom:0!important; }
     section.main { margin-bottom:0!important; padding-bottom:0!important; }
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
+
+    /* Calendar custom styling to match theme */
+    .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
+    .fc-theme-standard td, .fc-theme-standard th { border-color: #00C85340; }
+    .fc-button-primary { background: #00C853 !important; border: none !important; }
+    .fc-button-primary:hover { background: #00ff6c !important; }
+    .fc-event { background: #ff4444; border: none; opacity: 0.9; }
 </style>
 
 <div style="text-align:center;padding:0px 0 15px 0; margin-top:-20px;">
@@ -147,8 +155,10 @@ if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 if "appt_date_str" not in st.session_state:
     st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state:
-    st.session_state.appt_time_str = "13:00"
+if "appt_start_time_str" not in st.session_state:
+    st.session_state.appt_start_time_str = "13:00"
+if "appt_end_time_str" not in st.session_state:
+    st.session_state.appt_end_time_str = "15:00"
 
 # ==================== SUCCESS HANDLING ====================
 if st.query_params.get("success") == "1":
@@ -222,6 +232,42 @@ Covina, CA
 
     st.stop()
 
+# ==================== AVAILABILITY CALENDAR ====================
+st.markdown("### Check Availability")
+c.execute("SELECT name, start_dt, end_dt FROM bookings WHERE deposit_paid = 1")
+booked = c.fetchall()
+
+events = []
+for name, start_utc, end_utc in booked:
+    start_local = pytz.UTC.localize(datetime.fromisoformat(start_utc)).astimezone(STUDIO_TZ)
+    end_local = pytz.UTC.localize(datetime.fromisoformat(end_utc)).astimezone(STUDIO_TZ)
+    events.append({
+        "title": f"Booked – {name}",
+        "start": start_local.isoformat(),
+        "end": end_local.isoformat(),
+        "backgroundColor": "#ff4444",
+        "borderColor": "#ff4444",
+        "textColor": "white"
+    })
+
+calendar_options = {
+    "initialView": "timeGridWeek",
+    "headerToolbar": {
+        "left": "prev,next today",
+        "center": "title",
+        "right": "dayGridMonth,timeGridWeek,timeGridDay"
+    },
+    "slotMinTime": "12:00:00",
+    "slotMaxTime": "20:00:00",
+    "hiddenDays": [0],  # Hide Sundays
+    "height": "600px",
+    "editable": False,
+    "selectable": False,
+}
+
+cal = calendar(events=events, options=calendar_options, key="availability_cal")
+st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).</small>", unsafe_allow_html=True)
+
 # ==================== MAIN FORM ====================
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
@@ -242,9 +288,9 @@ with st.form("booking_form", clear_on_submit=True):
     if uploaded:
         st.session_state.uploaded_files = uploaded
 
-    st.markdown("### Select Date & Time")
+    st.markdown("### Select Date & Start/End Time")
 
-    dc, tc = st.columns(2)
+    dc, tc1, tc2 = st.columns(3)
     with dc:
         components.html(f"""
         <input type="date" id="d" value="{st.session_state.appt_date_str}"
@@ -253,17 +299,26 @@ with st.form("booking_form", clear_on_submit=True):
                style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
         """, height=72)
-    with tc:
+    with tc1:
         components.html(f"""
-        <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
+        <input type="time" id="start" value="{st.session_state.appt_start_time_str}" step="1800"
                style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=72)
+        <small style="color:#00ff88;display:block;text-align:center;margin-top:4px;">Start Time</small>
+        """, height=90)
+    with tc2:
+        components.html(f"""
+        <input type="time" id="end" value="{st.session_state.appt_end_time_str}" step="1800"
+               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
+        <small style="color:#00ff88;display:block;text-align:center;margin-top:4px;">End Time</small>
+        """, height=90)
 
     components.html("""
     <script>
         document.getElementById('d')?.addEventListener('change', e => parent.streamlit.setComponentValue({date: e.target.value}));
-        document.getElementById('t')?.addEventListener('change', e => parent.streamlit.setComponentValue({time: e.target.value}));
+        document.getElementById('start')?.addEventListener('change', e => parent.streamlit.setComponentValue({start: e.target.value}));
+        document.getElementById('end')?.addEventListener('change', e => parent.streamlit.setComponentValue({end: e.target.value}));
     </script>
     """, height=0)
 
@@ -271,21 +326,29 @@ with st.form("booking_form", clear_on_submit=True):
         v = st.session_state.streamlit_component_value
         if v.get("date"):
             st.session_state.appt_date_str = v["date"]
-        if v.get("time"):
-            st.session_state.appt_time_str = v["time"]
+        if v.get("start"):
+            st.session_state.appt_start_time_str = v["start"]
+        if v.get("end"):
+            st.session_state.appt_end_time_str = v["end"]
 
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-        appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
+        appt_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
+        appt_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
     except:
         appt_date = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
-        appt_time = datetime.strptime("13:00", "%H:%M").time()
+        appt_start = time(13, 0)
+        appt_end = time(15, 0)
 
     # Validation feedback
     if appt_date.weekday() == 6:
         st.error("❌ Closed on Sundays — please choose another day")
-    if appt_time.hour < 12 or appt_time.hour > 20:
-        st.error("❌ Studio open 12 PM – 8 PM only")
+    if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
+        st.error("❌ Times must be within 12 PM – 8 PM")
+    if appt_end <= appt_start:
+        st.error("❌ End time must be after start time")
+    if (datetime.combine(appt_date, appt_end) - datetime.combine(appt_date, appt_start)) < timedelta(minutes=30):
+        st.error("❌ Minimum 30 minutes per appointment")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -307,24 +370,29 @@ with st.form("booking_form", clear_on_submit=True):
         if appt_date.weekday() == 6:
             st.error("Cannot book on Sundays")
             st.stop()
-        if appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Time must be between 12 PM and 8 PM")
+        if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
+            st.error("Times must be within studio hours")
+            st.stop()
+        if appt_end <= appt_start:
+            st.error("End time must be after start time")
             st.stop()
 
-        start_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
-        end_dt_local = start_dt_local + timedelta(hours=2)
+        start_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_start))
+        end_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_end))
 
         start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
         end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
-        # Conflict detection (only check confirmed bookings)
-        conflict = c.execute(
-            "SELECT name FROM bookings WHERE deposit_paid = 1 AND start_dt < ? AND end_dt > ?",
-            (end_utc, start_utc)
-        ).fetchone()
+        # Conflict detection (overlapping with any confirmed booking)
+        c.execute("""
+            SELECT name FROM bookings 
+            WHERE deposit_paid = 1 
+            AND start_dt < ? AND end_dt > ?
+        """, (end_utc, start_utc))
+        conflict = c.fetchone()
 
         if conflict:
-            st.error(f"❌ This slot is already taken by {conflict[0]}. Please choose another time.")
+            st.error(f"❌ This time overlaps with an existing booking ({conflict[0]}). Please choose another slot.")
             st.stop()
 
         # Create booking ID and save files
@@ -356,19 +424,19 @@ with st.form("booking_form", clear_on_submit=True):
             customer_email=email
         )
 
-        # Save tentative booking (deposit_paid = 0)
+        # Save tentative booking
         c.execute("""INSERT INTO bookings 
                      (id, name, age, phone, email, description, date, time, start_dt, end_dt, 
                       deposit_paid, stripe_session_id, files, created_at)
                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
             bid, name, age, phone, email, description,
-            str(appt_date), appt_time.strftime("%-I:%M %p"),
+            str(appt_date), f"{appt_start.strftime('%-I:%M %p')} – {appt_end.strftime('%-I:%M %p')}",
             start_utc, end_utc,
             0, session.id, ",".join(saved_paths), datetime.utcnow().isoformat()
         ))
         conn.commit()
 
-        # Clear uploaded files after successful submission
+        # Clear uploaded files
         st.session_state.uploaded_files = []
 
         st.success("✅ Slot reserved! Redirecting to secure payment...")
@@ -388,16 +456,14 @@ st.markdown("""
 # RESTORE NATURAL SCROLL & BOTTOM GLOW
 st.markdown("""
 <style>
-    /* Allow natural scrolling and keep bottom glow visible */
     .stApp {
         display: flex !important;
         flex-direction: column !important;
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
+        flex: 1 !important;
     }
-    /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
