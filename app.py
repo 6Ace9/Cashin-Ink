@@ -1,4 +1,4 @@
-# app.py → FINAL GORGEOUS VERSION | CLEAN GLASS | PERFECT PICKERS | NO UGLY GLOW
+# app.py → FINAL FLAWLESS VERSION | GREY PICKERS | NO BOTTOM SPACE | GORGEOUS
 
 import streamlit as st
 import sqlite3
@@ -16,7 +16,7 @@ from email import encoders
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== CLEAN & ELEGANT DESIGN ====================
+# ==================== FINAL DESIGN: CLEAN, GREY PICKERS, NO BOTTOM GAP ====================
 st.markdown("""
 <style>
     /* Fullscreen background */
@@ -29,84 +29,76 @@ st.markdown("""
     }
     .stApp::before {
         content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.85); z-index: -1;
+        background: rgba(0, 0, 0, 0.86); z-index: -1;
     }
 
-    /* Clean glass card — no harsh green border */
+    /* Clean glass card */
     .main {
-        background: rgba(20, 20, 25, 0.55) !important;
+        background: rgba(22, 22, 28, 0.6) !important;
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        border-radius: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
         margin: 20px auto;
         max-width: 960px;
-        padding: 45px 50px;
+        padding: 50px;
     }
 
-    /* Beautiful glowing logo only */
+    /* Logo glow only */
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
         to   { filter: drop-shadow(0 0 45px #00C853); }
     }
     .logo-glow {
         animation: glow 4s ease-in-out infinite alternate;
-        border-radius: 18px;
+        border-radius: 20px;
     }
 
-    /* Clean inputs & pickers */
+    /* Inputs */
     .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    .stNumberInput > div > div > input {
-        background: rgba(30, 30, 35, 0.7) !important;
+    .stTextArea > div > div > textarea {
+        background: rgba(40, 40, 45, 0.8) !important;
         border: 1px solid #00C85340 !important;
-        border-radius: 12px !important;
+        border-radius: 14px !important;
         color: white !important;
-        padding: 14px !important;
-        font-size: 17px !important;
+        padding: 16px !important;
+        font-size: 18px !important;
     }
 
-    /* Beautiful custom date/time pickers */
+    /* DATE & TIME PICKERS — DARK GREY BACKGROUND LIKE BEFORE */
     input[type="date"], input[type="time"] {
         width: 100% !important;
-        padding: 18px !important;
+        padding: 20px !important;
         font-size: 20px !important;
-        background: rgba(30, 30, 35, 0.8) !important;
+        background: #1e1e1e !important;
         color: white !important;
         border: 2px solid #00C853 !important;
         border-radius: 14px !important;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
-        transition: all 0.3s;
-    }
-    input[type="date"]:focus, input[type="time"]:focus {
-        outline: none;
-        border-color: #00ff6c;
-        box-shadow: 0 0 20px rgba(0, 255, 108, 0.5);
+        box-shadow: 0 6px 20px rgba(0, 200, 83, 0.3);
     }
 
-    /* Buttons */
+    /* Button */
     .stButton>button {
-        background: linear-gradient(45deg, #00C853, #00e676) !important;
+        background: linear-gradient(45deg, #00C853, #00ff6c) !important;
         color: black !important;
         font-weight: bold !important;
         border: none !important;
-        border-radius: 16px !important;
-        padding: 18px 50px !important;
-        font-size: 21px !important;
-        min-height: 70px !important;
-        box-shadow: 0 8px 25px rgba(0, 200, 83, 0.5) !important;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 15px 35px rgba(0, 255, 108, 0.6) !important;
+        border-radius: 18px !important;
+        padding: 20px 60px !important;
+        font-size: 22px !important;
+        min-height: 76px !important;
+        box-shadow: 0 10px 30px rgba(0, 200, 83, 0.6) !important;
     }
 
-    h1,h2,h3,h4 { color: #00C853 !important; text-align: center; font-weight: 500; }
-    .block-container { padding: 0 !important; }
+    h1,h2,h3,h4 { color: #00ff88 !important; text-align: center; font-weight: 500; }
+
+    /* KILL ALL BOTTOM SPACE & STREAMLIT GARBAGE */
+    .block-container { padding-bottom: 0 !important; margin-bottom: 0 !important; }
     footer { visibility: hidden !important; }
+    .main > div { padding-bottom: 0 !important; }
+    section.main { margin-bottom: 0 !important; }
     .stApp { overflow: hidden; }
 </style>
 
@@ -114,7 +106,7 @@ st.markdown("""
 <div style="text-align:center; padding:60px 0 30px 0;">
     <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png"
          class="logo-glow" style="width:360px; height:auto;" loading="lazy">
-    <h3 style="margin-top:18px; color:#00ff88; font-weight:300; font-size:1.8rem; letter-spacing:1.5px;">
+    <h3 style="margin-top:20px; color:#00ff88; font-weight:300; font-size:1.9rem; letter-spacing:2px;">
         LA — Premium Tattoo Studio
     </h3>
 </div>
@@ -144,13 +136,13 @@ SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-c = conn.cursor()
+c = .cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY, name TEXT, age INTEGER, phone TEXT, email TEXT, description TEXT,
     date TEXT, time TEXT, start_dt TEXT, end_dt TEXT,
     deposit_paid INTEGER DEFAULT 0, stripe_session_id TEXT, files TEXT, created_at TEXT
 )''')
-conn.commit()
+.commit()
 
 # Session state
 if "uploaded_files" not in st.session_state:
@@ -162,7 +154,7 @@ if "appt_time_str" not in st.session_state:
 
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
-st.info("Lock in your slot • Non-refundable")
+st.info("Non-refundable • Locks your slot")
 
 with st.form("booking_form", clear_on_submit=True):
     col1, col2 = st.columns(2)
@@ -173,34 +165,34 @@ with st.form("booking_form", clear_on_submit=True):
         age = st.number_input("Age*", min_value=18, max_value=100, value=25)
         email = st.text_input("Email*", placeholder="you@gmail.com")
 
-    description = st.text_area("Tattoo Idea* (size, placement, style)", height=140, placeholder="e.g. 6x4 inch Japanese dragon on forearm, full color")
+    description = st.text_area("Tattoo Idea* (size, placement, style)", height=140)
 
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
     if uploaded:
         st.session_state.uploaded_files = uploaded
 
-    st.markdown("### Select Date & Time", unsafe_allow_html=True)
+    st.markdown("### Select Date & Time")
     dc, tc = st.columns([1.8, 1])
     
     with dc:
         components.html(f"""
-        <div style="padding: 10px 0;">
-            <label style="color:#00ff88; font-size:18px; display:block; margin-bottom:8px;">Date</label>
+        <div style="padding: 12px 0;">
+            <label style="color:#00ff88; font-size:19px; display:block; margin-bottom:10px;">Date</label>
             <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
                    min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
                    max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }">
         </div>
-        """, height=120)
+        """, height=130)
     
     with tc:
         components.html(f"""
-        <div style="padding: 10px 0;">
-            <label style="color:#00ff88; font-size:18px; display:block; margin-bottom:8px;">Start Time</label>
+        <div style="padding: 12px 0;">
+            <label style="color:#00ff88; font-size:19px; display:block; margin-bottom:10px;">Start Time</label>
             <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600">
         </div>
-        """, height=120)
+        """, height=130)
 
-    # Sync pickers
+    # Sync
     components.html("""
     <script>
         document.getElementById('datePicker')?.addEventListener('change', () => 
@@ -225,21 +217,19 @@ with st.form("booking_form", clear_on_submit=True):
     if appt_date.weekday() == 6:
         st.error("Closed on Sundays")
     if appt_time.hour < 12 or appt_time.hour > 20:
-        st.error("Studio open 12 PM – 8 PM only")
+        st.error("Open 12 PM – 8 PM only")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    _, center, _ = st.columns([1, 2.2, 1])
+    _, center, _ = st.columns([1, 2.4, 1])
     with center:
         submit = st.form_submit_button("PAY DEPOSIT → LOCK MY SLOT", use_container_width=True)
 
     if submit:
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Invalid date/time")
-            st.stop()
+            st.error("Invalid date/time"); st.stop()
         if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Complete all fields")
-            st.stop()
+            st.error("Fill all fields"); st.stop()
 
         start_dt_local = datetime.combine(appt_date, appt_time)
         start_dt = STUDIO_TZ.localize(start_dt_local)
@@ -248,8 +238,7 @@ with st.form("booking_form", clear_on_submit=True):
         conflict = c.execute("SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
                             (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())).fetchone()
         if conflict:
-            st.error(f"Slot taken by {conflict[0]}")
-            st.stop()
+            st.error(f"Slot taken by {conflict[0]}"); st.stop()
 
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
@@ -262,14 +251,7 @@ with st.form("booking_form", clear_on_submit=True):
 
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {"name": f"Deposit – {name}"},
-                    "unit_amount": 15000,
-                },
-                "quantity": 1
-            }],
+            line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
             mode="payment",
             success_url=SUCCESS_URL,
             cancel_url=CANCEL_URL,
@@ -286,7 +268,7 @@ with st.form("booking_form", clear_on_submit=True):
         )
         conn.commit()
 
-        st.success("Redirecting to payment…")
+        st.success("Taking you to payment…")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
@@ -316,17 +298,15 @@ DESCRIPTION:Client: {name}\\nPhone: {phone}\\nEmail: {email}\\nIdea: {desc}\\nDe
 END:VEVENT
 END:VCALENDAR""".format(
                 bid=bid, now=datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
-                start=start_dt.strftime("%Y%m%dT%H%M00"),
-                end=end_dt.strftime("%Y%m%dT%H%M00"),
-                name=client_name, phone=phone, email=client_email,
-                desc=desc.replace("\n", "\\n")
+                start=start_dt.strftime("%Y%m%dT%H%M00"), end=end_dt.strftime("%Y%m%dT%H%M00"),
+                name=client_name, phone=phone, email=client_email, desc=desc.replace("\n", "\\n")
             )
 
             msg = MIMEMultipart()
             msg['From'] = ICLOUD_EMAIL
             msg['To'] = ICLOUD_EMAIL
-            msg['Subject'] = f"New Booking: {client_name} – {date_str} {time_str}"
-            msg.attach(MIMEText(f"New paid booking!\n\n{client_name}\n{date_str} @ {time_str}", 'plain'))
+            msg['Subject'] = f"New Booking: {client_name}"
+            msg.attach(MIMEText(f"New booking!\n{client_name} – {date_str} {time_str}", 'plain'))
 
             part = MIMEBase('text', 'calendar; name="booking.ics"')
             part.set_payload(ics_content)
@@ -340,14 +320,15 @@ END:VCALENDAR""".format(
                 server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 server.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 server.quit()
-                st.success("Calendar event sent!")
+                st.success("Sent to Julio's calendar!")
             except:
-                pass  # silent fail
+                pass
 
+# CLOSE CARD + FOOTER (NO EMPTY SPACE)
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("""
-<div style="text-align:center; padding:70px 0 40px; color:#444; font-size:15px;">
+<div style="text-align:center; padding:70px 0 30px; color:#444; font-size:15px; margin-top:-20px;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
