@@ -1,4 +1,4 @@
-# app.py ← FINAL: BUTTON PERFECTLY CENTERED ON MOBILE & DESKTOP + NO EXTRA SCROLL SPACE
+# app.py ← FINAL: PAY DEPOSIT BUTTON TEXT ON SINGLE LINE + PERFECTLY CENTERED & WIDE
 import streamlit as st
 import sqlite3
 import os
@@ -54,29 +54,13 @@ st.markdown(f"""
         padding:18px 40px !important; 
         font-size:20px !important;
         height: auto !important;
+        white-space: nowrap !important;   /* Keeps text on one line */
+        min-height: 60px !important;      /* Ensures enough height for single-line text */
     }}
-    /* Force wide rectangular button with proper centering on ALL devices */
-    .wide-centered-button {{
-        display: flex;
-        justify-content: center;
-        margin-top: 30px;
-        margin-bottom: 0;
-    }}
-    .wide-centered-button > div {{
-        width: 100%;
-        max-width: 600px;
-    }}
-    .wide-centered-button button {{
-        width: 100% !important;
-    }}
-    /* Remove any extra bottom space when scrolling */
-    .block-container {{
-        padding-bottom: 0 !important;
-        margin-bottom: 0 !important;
-    }}
+    /* Remove extra scroll space */
+    .block-container {{ padding-bottom: 1rem !important; }}
     footer {{ visibility: hidden !important; }}
-    /* Hide Streamlit's default footer and any extra padding */
-    .css-1d391kg, .css-1avcm0n {{ display: none !important; }}
+    .css-1d391kg {{ display: none !important; }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -201,10 +185,14 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # FINAL: WIDE, RECTANGULAR, PERFECTLY CENTERED BUTTON ON MOBILE & DESKTOP
-    st.markdown("<div class='wide-centered-button'><div>", unsafe_allow_html=True)
-    submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    # FINAL: Wide, centered button with text on ONE LINE
+    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+    left_col, center_col, right_col = st.columns([1, 1.8, 1])  # Wider middle column for spacious button
+    with center_col:
+        submit = st.form_submit_button(
+            "SCHEDULE APPOINTMENT",
+            use_container_width=True
+        )
 
     if submit:
         if appt_date.weekday() == 6:
