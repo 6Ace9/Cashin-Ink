@@ -26,8 +26,6 @@ st.markdown("""
         background-size: cover !important;
         min-height: 100vh;
         margin: 0; padding: 0;
-        display: flex;
-        flex-direction: column;
     }
     .stApp::before {
         content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -46,10 +44,9 @@ st.markdown("""
             0 0 30px rgba(0, 200, 83, 0.4),
             0 0 60px rgba(0, 255, 100, 0.25),
             inset 0 0 20px rgba(0, 255, 100, 0.1);
-        margin: 60px auto 40px auto;  /* Increased bottom margin for breathing room */
+        margin: 60px auto 80px auto;  /* Extra bottom margin for scroll space */
         max-width: 960px;
         padding: 25px;
-        /* Removed flex: 1 — this was the main culprit */
     }
 
     @keyframes pulseGlow {
@@ -105,19 +102,19 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* Only hide Streamlit's default footer */
+    /* Hide only Streamlit's default footer */
     footer, [data-testid="stFooter"] { display:none !important; }
 
-    /* Calendar custom styling to match theme */
+    /* Calendar styling */
     .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
     .fc-theme-standard td, .fc-theme-standard th { border-color: #00C85340; }
     .fc-button-primary { background: #00C853 !important; border: none !important; }
     .fc-button-primary:hover { background: #00ff6c !important; }
     .fc-event { background: #ff4444; border: none; opacity: 0.9; }
 
-    /* Ensure scrolling works and footer is reachable */
+    /* Ensure natural scrolling and space at bottom */
     .block-container {
-        padding-bottom: 3rem !important;
+        padding-bottom: 4rem !important;
     }
 </style>
 
@@ -465,15 +462,8 @@ with st.form("booking_form", clear_on_submit=True):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# CLOSE CARD
+# CLOSE GLASS CARD
 st.markdown("</div>", unsafe_allow_html=True)
-
-# WHITE FOOTER
-st.markdown("""
-<div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:50px 0 30px 0; margin:0;">
-    © 2025 Cashin Ink — Covina, CA
-</div>
-""", unsafe_allow_html=True)
 
 # NATURAL NON-FLOATING FOOTER — JUST SCROLL DOWN TO SEE IT
 st.markdown("""
