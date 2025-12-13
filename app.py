@@ -163,6 +163,8 @@ if "appt_end_time_str" not in st.session_state:
     st.session_state.appt_end_time_str = "15:00"
 
 # ==================== SUCCESS HANDLING ====================
+# (unchanged - same as previous version)
+
 if st.query_params.get("success") == "1":
     session_id = st.query_params.get("session_id")
     
@@ -232,6 +234,8 @@ Covina, CA
     st.stop()
 
 # ==================== AVAILABILITY CALENDAR ====================
+# (unchanged)
+
 st.markdown("### Check Availability")
 c.execute("SELECT name, start_dt, end_dt FROM bookings WHERE deposit_paid = 1")
 booked = c.fetchall()
@@ -317,11 +321,13 @@ with st.form("booking_form", clear_on_submit=True):
             default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
         except:
             default_start = time(13, 0)
+        # Force 12-hour AM/PM format with 30-minute steps
         start_time = st.time_input(
             "",
             value=default_start,
             step=timedelta(minutes=30),
-            key="appt_start_input"
+            key="appt_start_input",
+            help="Select in 30-minute increments (12-hour format with AM/PM)"
         )
         st.session_state.appt_start_time_str = start_time.strftime("%H:%M")
 
@@ -335,7 +341,8 @@ with st.form("booking_form", clear_on_submit=True):
             "",
             value=default_end,
             step=timedelta(minutes=30),
-            key="appt_end_input"
+            key="appt_end_input",
+            help="Select in 30-minute increments (12-hour format with AM/PM)"
         )
         st.session_state.appt_end_time_str = end_time.strftime("%H:%M")
 
@@ -366,6 +373,7 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
+        # (rest of submit logic unchanged - same as previous)
         if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
             st.error("Please fill all required fields")
             st.stop()
@@ -471,7 +479,7 @@ st.markdown("""
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
+        flex: 1 !important;
     }
     /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
