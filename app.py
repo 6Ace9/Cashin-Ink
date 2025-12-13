@@ -1,4 +1,4 @@
-# app.py → FINAL PERFECT VERSION | GREY PICKERS | NO BOTTOM SPACE | ZERO ERRORS
+# app.py → FINAL PERFECT VERSION | IDENTICAL PICKERS ON MOBILE & DESKTOP
 
 import streamlit as st
 import sqlite3
@@ -16,7 +16,7 @@ from email import encoders
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== DESIGN ====================
+# ==================== PERFECT CONSISTENT DESIGN (MOBILE = DESKTOP) ====================
 st.markdown("""
 <style>
     .stApp {
@@ -28,7 +28,7 @@ st.markdown("""
     }
     .stApp::before {
         content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0, 0.86); z-index: -1;
+        background: rgba(0, 0, 0, 0.86); z-index: -1;
     }
     .main {
         background: rgba(22, 22, 28, 0.6) !important;
@@ -47,7 +47,7 @@ st.markdown("""
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
 
-    /* Grey inputs like you wanted */
+    /* Force ALL inputs to match */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stNumberInput > div > div > input {
@@ -59,19 +59,34 @@ st.markdown("""
         font-size: 18px !important;
     }
 
-    /* Date & Time pickers — dark grey background */
-    input[type="date"], input[type="time"] {
+    /* DATE & TIME PICKERS — IDENTICAL ON MOBILE AND DESKTOP */
+    input[type="date"],
+    input[type="time"] {
         width: 100% !important;
+        height: 68px !important;
         padding: 20px !important;
         font-size: 20px !important;
-        background: #1e1e1e !important;
-        color: white !important;
+        font-weight: 500 !important;
+        text-align: center !important;
+        background: #1e1e1e !important;           /* DARK GREY */
+        color: white !important;                  /* WHITE TEXT */
         border: 2px solid #00C853 !important;
-        border-radius: 14px !important;
-        text-align: center;
-        box-shadow: 0 6px 20px rgba(0,200,83,0.3);
+        border-radius: 16px !important;
+        box-shadow: 0 6px 20px rgba(0,200,83,0.35) !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
     }
 
+    /* Remove ugly default mobile styling */
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-inner-spin-button,
+    input[type="date"]::-webkit-clear-button {
+        filter: invert(1) brightness(2);  /* Makes arrow white */
+        opacity: 0.8;
+    }
+
+    /* Button */
     .stButton>button {
         background: linear-gradient(45deg, #00C853, #00ff6c) !important;
         color: black !important;
@@ -86,11 +101,9 @@ st.markdown("""
 
     h1,h2,h3,h4 { color: #00ff88 !important; text-align: center; font-weight: 500; }
 
-    /* Remove all bottom space */
-    .block-container { padding-bottom: 0 !important; margin-bottom:0 !important; }
+    /* No bottom space */
+    .block-container { padding-bottom: 0 !important; margin-bottom: 0 !important; }
     footer { visibility: hidden !important; }
-    .main > div { padding-bottom:0 !important; }
-    section.main { margin-bottom:0 !important; }
     .stApp { overflow: hidden; }
 </style>
 
@@ -112,7 +125,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/New_York")
 
 if "STRIPE_SECRET_KEY" not in st.secrets:
-    st.error("Missing STRIPE_SECRET_KEY in secrets")
+    st.error("Missing STRIPE_SECRET_KEY")
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
@@ -127,7 +140,7 @@ SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-c = conn.cursor()   # ← FIXED: was ".cursor()" → now correct
+c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY, name TEXT, age INTEGER, phone TEXT, email TEXT, description TEXT,
     date TEXT, time TEXT, start_dt TEXT, end_dt TEXT,
@@ -167,19 +180,19 @@ with st.form("booking_form", clear_on_submit=True):
     with dc:
         components.html(f"""
         <div style="padding:12px 0;">
-            <label style="color:#00ff88;font-size:19px;margin-bottom:10px;">Date</label>
+            <label style="color:#00ff88;font-size:19px;margin-bottom:10px;display:block;">Date</label>
             <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
-                   min="{ (datetime.today()+timedelta(days=1)).strftime('%Y-%m-%d') }"
-                   max="{ (datetime.today()+timedelta(days=90)).strftime('%Y-%m-%d') }">
+                   min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
+                   max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }">
         </div>
-        """, height=130)
+        """, height=140)
     with tc:
         components.html(f"""
         <div style="padding:12px 0;">
-            <label style="color:#00ff88;font-size:19px;margin-bottom:10px;">Start Time</label>
+            <label style="color:#00ff88;font-size:19px;margin-bottom:10px;display:block;">Start Time</label>
             <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600">
         </div>
-        """, height=130)
+        """, height=140)
 
     # Sync pickers
     components.html("""
@@ -198,7 +211,6 @@ with st.form("booking_form", clear_on_submit=True):
         if picker.get("time"):
             st.session_state.appt_time_str = picker["time"]
 
-    # Parse date/time
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
@@ -215,7 +227,7 @@ with st.form("booking_form", clear_on_submit=True):
 
     _, center, _ = st.columns([1, 2.4, 1])
     with center:
-        submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
+        submit = st.form_submit_button("PAY DEPOSIT → LOCK MY SLOT", use_container_width=True)
 
     if submit:
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
@@ -228,7 +240,7 @@ with st.form("booking_form", clear_on_submit=True):
         end_dt = start_dt + timedelta(hours=2)
 
         conflict = c.execute("SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
-                          (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())).fetchone()
+                            (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())).fetchone()
         if conflict:
             st.error(f"Slot taken by {conflict[0]}"); st.stop()
 
@@ -271,7 +283,7 @@ with st.form("booking_form", clear_on_submit=True):
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# SUCCESS → SEND .ICS
+# SUCCESS → SEND .ICS (optional)
 if st.query_params.get("success") == "1":
     st.success("Payment Confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
@@ -300,7 +312,9 @@ END:VCALENDAR""".format(
                 now=datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
                 start=start_dt.strftime("%Y%m%dT%H%M00"),
                 end=end_dt.strftime("%Y%m%dT%H%M00"),
-                name=client_name, phone=phone, email=client_email,
+                name=client_name,
+                phone=phone,
+                email=client_email,
                 desc=desc.replace("\n", "\\n")
             )
 
@@ -322,11 +336,10 @@ END:VCALENDAR""".format(
                 server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 server.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 server.quit()
-                st.success("Sent to Julio's calendar!")
+                st.success("Sent to Julio!")
             except:
                 pass
 
-# CLOSE CARD + CLEAN FOOTER
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("""
