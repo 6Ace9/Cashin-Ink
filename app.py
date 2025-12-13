@@ -46,10 +46,10 @@ st.markdown("""
             0 0 30px rgba(0, 200, 83, 0.4),
             0 0 60px rgba(0, 255, 100, 0.25),
             inset 0 0 20px rgba(0, 255, 100, 0.1);
-        margin:  60px auto 20px auto;
+        margin: 60px auto 40px auto;  /* Increased bottom margin for breathing room */
         max-width: 960px;
         padding: 25px;
-        flex: 1;
+        /* Removed flex: 1 — this was the main culprit */
     }
 
     @keyframes pulseGlow {
@@ -105,11 +105,8 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL EVERYTHING AT BOTTOM — 100% GONE */
-    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
-    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
-    section.main { margin-bottom:0!important; padding-bottom:0!important; }
-    .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
+    /* Only hide Streamlit's default footer */
+    footer, [data-testid="stFooter"] { display:none !important; }
 
     /* Calendar custom styling to match theme */
     .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
@@ -117,6 +114,11 @@ st.markdown("""
     .fc-button-primary { background: #00C853 !important; border: none !important; }
     .fc-button-primary:hover { background: #00ff6c !important; }
     .fc-event { background: #ff4444; border: none; opacity: 0.9; }
+
+    /* Ensure scrolling works and footer is reachable */
+    .block-container {
+        padding-bottom: 3rem !important;
+    }
 </style>
 
 <div style="text-align:center;padding:0px 0 15px 0; margin-top:-20px;">
@@ -294,7 +296,6 @@ with st.form("booking_form", clear_on_submit=True):
 
     col_date, col_start, col_end = st.columns(3)
 
-    # Date picker (unchanged)
     with col_date:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Date</small>", unsafe_allow_html=True)
         min_date = datetime.now(STUDIO_TZ).date() + timedelta(days=1)
@@ -312,23 +313,21 @@ with st.form("booking_form", clear_on_submit=True):
         )
         st.session_state.appt_date_str = selected_date.strftime("%Y-%m-%d")
 
-    # Generate 30-minute slots from 12:00 PM to 7:30 PM (to allow up to 8:00 PM end)
     time_options = []
     display_options = []
     start_hour = 12
-    end_hour = 19  # up to 19:30 for end time up to 20:00
+    end_hour = 19
     for hour in range(start_hour, end_hour + 1):
         for minute in [0, 30]:
             t = time(hour % 24, minute)
             time_options.append(t)
             display_options.append(t.strftime("%-I:%M %p"))
 
-    # Start Time picker - 12-hour AM/PM dropdown
     with col_start:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
         try:
             default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
-            start_index = time_options.index(default_start) if default_start in time_options else 2  # default ~1:00 PM
+            start_index = time_options.index(default_start) if default_start in time_options else 2
         except:
             start_index = 2
         selected_start_display = st.selectbox(
@@ -340,12 +339,11 @@ with st.form("booking_form", clear_on_submit=True):
         selected_start_time = time_options[display_options.index(selected_start_display)]
         st.session_state.appt_start_time_str = selected_start_time.strftime("%H:%M")
 
-    # End Time picker - 12-hour AM/PM dropdown
     with col_end:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>End Time</small>", unsafe_allow_html=True)
         try:
             default_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
-            end_index = time_options.index(default_end) if default_end in time_options else 6  # default ~3:00 PM
+            end_index = time_options.index(default_end) if default_end in time_options else 6
         except:
             end_index = 6
         selected_end_display = st.selectbox(
@@ -357,7 +355,6 @@ with st.form("booking_form", clear_on_submit=True):
         selected_end_time = time_options[display_options.index(selected_end_display)]
         st.session_state.appt_end_time_str = selected_end_time.strftime("%H:%M")
 
-    # Parse for validation
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_start = selected_start_time
@@ -367,7 +364,6 @@ with st.form("booking_form", clear_on_submit=True):
         appt_start = time(13, 0)
         appt_end = time(15, 0)
 
-    # Validation feedback
     if appt_date.weekday() == 6:
         st.error("❌ Closed on Sundays — please choose another day")
     if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
@@ -472,9 +468,9 @@ with st.form("booking_form", clear_on_submit=True):
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# WHITE FOOTER — EXACTLY AS ORIGINAL
+# WHITE FOOTER
 st.markdown("""
-<div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
+<div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:50px 0 30px 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
