@@ -32,7 +32,7 @@ def img_b64(path):
     except:
         return None
 
-logo_b64 = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/logo.png")
+logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
 bg_b64   = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
 
 logo_html = (
