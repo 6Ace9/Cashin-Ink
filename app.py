@@ -1,4 +1,4 @@
-# app.py ← FINAL: WIDE RECTANGULAR BUTTON (MOBILE & DESKTOP CONSISTENT) + NO "Missing Submit Button" ERROR
+# app.py ← FINAL: BUTTON PERFECTLY CENTERED ON MOBILE & DESKTOP + NO EXTRA SCROLL SPACE
 import streamlit as st
 import sqlite3
 import os
@@ -55,17 +55,28 @@ st.markdown(f"""
         font-size:20px !important;
         height: auto !important;
     }}
-    /* Make button wide and rectangular on both mobile & desktop */
-    .wide-centered-button button {{
-        width: 100% !important;
-        max-width: 600px !important;
-    }}
+    /* Force wide rectangular button with proper centering on ALL devices */
     .wide-centered-button {{
         display: flex;
         justify-content: center;
         margin-top: 30px;
+        margin-bottom: 0;
+    }}
+    .wide-centered-button > div {{
+        width: 100%;
+        max-width: 600px;
+    }}
+    .wide-centered-button button {{
+        width: 100% !important;
+    }}
+    /* Remove any extra bottom space when scrolling */
+    .block-container {{
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
     }}
     footer {{ visibility: hidden !important; }}
+    /* Hide Streamlit's default footer and any extra padding */
+    .css-1d391kg, .css-1avcm0n {{ display: none !important; }}
 </style>
 
 <div style="text-align:center;padding:20px 0;">
@@ -190,10 +201,10 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # WIDE RECTANGULAR CENTERED BUTTON — CONSISTENT ON MOBILE & DESKTOP
-    st.markdown("<div class='wide-centered-button'>", unsafe_allow_html=True)
+    # FINAL: WIDE, RECTANGULAR, PERFECTLY CENTERED BUTTON ON MOBILE & DESKTOP
+    st.markdown("<div class='wide-centered-button'><div>", unsafe_allow_html=True)
     submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
     if submit:
         if appt_date.weekday() == 6:
