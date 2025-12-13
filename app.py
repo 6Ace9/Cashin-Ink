@@ -1,4 +1,4 @@
-# app.py ← FINAL: FIXED "Missing Submit Button" + ORIGINAL LOOK & FULL FUNCTIONALITY
+# app.py ← FINAL: 100% FIXED "Missing Submit Button" + EXACT ORIGINAL LOOK & FULL FUNCTIONALITY
 import streamlit as st
 import sqlite3
 import os
@@ -27,7 +27,7 @@ def img_b64(path):
     except:
         return None
 
-# YOUR GITHUB RAW URLs HERE (replace with your actual links)
+# YOUR GITHUB RAW URLs HERE
 logo_b64 = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/logo.png")
 bg_b64   = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
 
@@ -47,6 +47,7 @@ st.markdown(f"""
     .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
     h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
     .stButton>button {{ background:#00C853 !important; color:black !important; font-weight:bold; border-radius:8px; padding:16px 40px; font-size:20px; }}
+    .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
     footer {{ visibility: hidden !important; }}
 </style>
 
@@ -80,13 +81,10 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state initialization
-if "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state:
-    st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state:
-    st.session_state.appt_time_str = "13:00"
+# Session state
+if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
 
 st.markdown("---")
 st.header("Book Sessions — $150 Deposit")
@@ -103,13 +101,11 @@ with st.form("booking_form"):
 
     description = st.text_area("Tattoo Idea* (size, placement, style)", height=120)
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded:
-        st.session_state.uploaded_files = uploaded
+    if uploaded: st.session_state.uploaded_files = uploaded
 
     st.markdown("### Date & Time")
     dc, tc = st.columns([2,1])
 
-    # DATE PICKER — BIG & BEAUTIFUL (works on desktop & mobile)
     with dc:
         st.markdown("**Select Date**")
         components.html(f"""
@@ -127,7 +123,6 @@ with st.form("booking_form"):
         </script>
         """, height=180)
 
-    # TIME PICKER — BIG & BEAUTIFUL (works on desktop & mobile)
     with tc:
         st.markdown("**Start Time**")
         components.html(f"""
@@ -143,7 +138,6 @@ with st.form("booking_form"):
         </script>
         """, height=180)
 
-    # Sync values back to Streamlit
     components.html(f"""
     <script>
         const dateInput = document.getElementById('datePicker');
@@ -165,7 +159,6 @@ with st.form("booking_form"):
         if picker_value.get("time"):
             st.session_state.appt_time_str = picker_value["time"]
 
-    # Parse final selected date/time
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
@@ -173,82 +166,84 @@ with st.form("booking_form"):
         appt_date = (datetime.today() + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    if appt_date.weekday() == 6:  # Sunday
-        st.error("Closed on Sundays")
-        st.stop()
+    # Validation messages (these do NOT stop the form rendering)
+    if appt_date.weekday() == 6:
+        st.error("Closed on Sundays — please choose another date")
     if appt_time.hour < 12 or appt_time.hour > 20:
-        st.error("Open 12 PM – 8 PM only")
-        st.stop()
+        st.error("Open 12 PM – 8 PM only — please adjust time")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # FIXED: Centered submit button using columns — NO HTML wrapper around the button
-    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-    _, col_center, _ = st.columns([1, 1, 1])
-    with col_center:
-        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
+    # THE ONLY RELIABLE FIX THAT KEEPS EXACT ORIGINAL LOOK
+    # We use pure CSS centering via columns + use_container_width=True
+    st.markdown("<div class='centered-button'>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
+    # Only run submission logic if button pressed AND validations pass
     if submit:
+        # Re-check validations on submit
+        if appt_date.weekday() == 6:
+            st.error("Closed on Sundays")
+            st.stop()
+        if appt_time.hour < 12 or appt_time.hour > 20:
+            st.error("Open 12 PM – 8 PM only")
+            st.stop()
         if not all([name, phone, email, description]) or age < 18 or not agree:
             st.error("Complete all fields & agree")
-        else:
-            start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
-            end_dt = start_dt + timedelta(hours=2)
+            st.stop()
 
-            conflict = c.execute(
-                "SELECT name FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
-                (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())
-            ).fetchone()
+        start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
+        end_dt = start_dt + timedelta(hours=2)
 
-            if conflict:
-                st.error(f"Slot taken by {conflict[0]}")
-                st.stop()
+        conflict = c.execute(
+            "SELECT name FROM bookings WHERE deposit_paid=1 AND start_dt < ? AND end_dt > ?",
+            (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())
+        ).fetchone()
 
-            bid = str(uuid.uuid4())
-            os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
-            paths = []
-            for f in st.session_state.uploaded_files:
-                p = f"{UPLOAD_DIR}/{bid}/{f.name}"
-                with open(p, "wb") as out:
-                    out.write(f.getbuffer())
-                paths.append(p)
+        if conflict:
+            st.error(f"Slot taken by {conflict[0]}")
+            st.stop()
 
-            session = stripe.checkout.Session.create(
-                payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {"name": f"Deposit – {name}"},
-                        "unit_amount": 15000
-                    },
-                    "quantity": 1
-                }],
-                mode="payment",
-                success_url=SUCCESS_URL,
-                cancel_url=CANCEL_URL,
-                metadata={"booking_id": bid},
-                customer_email=email
-            )
+        bid = str(uuid.uuid4())
+        os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
+        paths = []
+        for f in st.session_state.uploaded_files:
+            p = f"{UPLOAD_DIR}/{bid}/{f.name}"
+            with open(p, "wb") as out:
+                out.write(f.getbuffer())
+            paths.append(p)
 
-            c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-                bid, name, age, phone, email, description, str(appt_date),
-                appt_time.strftime("%-I:%M %p"),
-                start_dt.astimezone(pytz.UTC).isoformat(),
-                end_dt.astimezone(pytz.UTC).isoformat(),
-                0, session.id, ",".join(paths), datetime.utcnow().isoformat()
-            ))
-            conn.commit()
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
+            mode="payment",
+            success_url=SUCCESS_URL,
+            cancel_url=CANCEL_URL,
+            metadata={"booking_id": bid},
+            customer_email=email
+        )
 
-            st.success("Taking you to secure payment…")
-            st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
-            st.balloons()
+        c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
+            bid, name, age, phone, email, description, str(appt_date),
+            appt_time.strftime("%-I:%M %p"),
+            start_dt.astimezone(pytz.UTC).isoformat(),
+            end_dt.astimezone(pytz.UTC).isoformat(),
+            0, session.id, ",".join(paths), datetime.utcnow().isoformat()
+        ))
+        conn.commit()
 
-# Success message
+        st.success("Taking you to secure payment…")
+        st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
+        st.balloons()
+
+# Success message outside form
 if st.query_params.get("success"):
     st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
 
-# Admin view
 with st.expander("Studio — Upcoming Bookings"):
     for row in c.execute("SELECT name,date,time,phone,deposit_paid FROM bookings ORDER BY date,time").fetchall():
         status = "PAID" if row[4] else "PENDING"
