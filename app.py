@@ -47,7 +47,6 @@ st.markdown("""
         max-width: 960px;
         padding: 50px;
         flex: 1;
-        animation: pulseGlow 6s ease-in-out infinite alternate;
     }
 
     @keyframes pulseGlow {
