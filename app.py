@@ -92,7 +92,11 @@ st.markdown("""
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 </style>
 
-st.markdown("""
+st.markdown('''
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+</style>
+
 <div style="text-align:center;padding:5px 0 30px 0;">
     <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
