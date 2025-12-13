@@ -58,17 +58,7 @@ st.markdown("""
         from { filter: drop-shadow(0 0 20px #00C853); }
         to   { filter: drop-shadow(0 0 45px #00C853); }
     }
-    
-    .logo-glow { 
-    animation: glow 4s ease-in-out infinite alternate; 
-    border-radius: 20px; 
-    filter: 
-        drop-shadow(0 0 20px #00C853) 
-        drop-shadow(0 0 40px #00FF88)
-        brightness(1.2) 
-        contrast(1.3);
-    background: transparent !important; /* Helps if image has white */
-    }
+    .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
 
     .stTextInput>div>div>input,
     .stTextArea>div>div>textarea,
@@ -104,7 +94,7 @@ st.markdown("""
 
 <div style="text-align:center;padding:5px 0 30px 0;">
     <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png"
-     class="logo-glow" style="width:360px;height:auto; background:transparent;" loading="lazy">
+         class="logo-glow" style="width:360px;height:auto;" loading="lazy">
     <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
         LA — Premium Tattoo Studio
     </h3>
