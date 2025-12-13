@@ -96,7 +96,7 @@ st.markdown("""
     <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
     <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
-        LA — Premium Tattoo Studio
+        Cashin Ink
     </h3>
 </div>
 
