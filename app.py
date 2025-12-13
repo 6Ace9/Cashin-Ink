@@ -1,4 +1,4 @@
-# app.py ← FINAL: PAY DEPOSIT BUTTON PERFECTLY CENTERED ON MOBILE & DESKTOP + CLEAN SCROLL
+# app.py ← FINAL: PAY DEPOSIT BUTTON PERFECTLY CENTERED & WIDE ON MOBILE + DESKTOP
 import streamlit as st
 import sqlite3
 import os
@@ -55,24 +55,8 @@ st.markdown(f"""
         font-size:20px !important;
         height: auto !important;
     }}
-    /* Perfect wide centered button on mobile & desktop */
-    .centered-button-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 30px;
-        width: 100%;
-    }}
-    .centered-button-container > div {{
-        width: 100%;
-        max-width: 600px;
-    }}
-    .centered-button-container button {{
-        width: 100% !important;
-    }}
-    /* Remove extra bottom space / scroll padding */
-    .block-container {{
-        padding-bottom: 2rem !important;
-    }}
+    /* Remove extra scroll space */
+    .block-container {{ padding-bottom: 1rem !important; }}
     footer {{ visibility: hidden !important; }}
     .css-1d391kg {{ display: none !important; }}
 </style>
@@ -199,10 +183,11 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # FINAL FIX: Button perfectly centered on desktop & mobile, wide and beautiful
-    st.markdown("<div class='centered-button-container'>", unsafe_allow_html=True)
-    submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT")
-    st.markdown("</div>", unsafe_allow_html=True)
+    # PERFECT CENTERED WIDE BUTTON USING COLUMNS — WORKS 100% ON MOBILE & DESKTOP
+    st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+    left_col, center_col, right_col = st.columns([1, 1, 1])
+    with center_col:
+        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT", use_container_width=True)
 
     if submit:
         if appt_date.weekday() == 6:
