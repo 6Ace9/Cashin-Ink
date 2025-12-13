@@ -153,6 +153,7 @@ ICLOUD_ENABLED = "ICLOUD_EMAIL" in st.secrets and "ICLOUD_APP_PASSWORD" in st.se
 if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
     ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
+    STUDIO_EMAIL = ICLOUD_EMAIL  # Assume studio email is the same iCloud account
 
 BASE_URL = "https://cashin-ink.streamlit.app"
 SUCCESS_URL = f"{BASE_URL}/?success=1&session_id={{CHECKOUT_SESSION_ID}}"
@@ -171,13 +172,16 @@ conn.commit()
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
-# Default selection: tomorrow at 1:00 PM – 3:00 PM
-if "selected_date" not in st.session_state:
-    tomorrow = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
-    st.session_state.selected_date = tomorrow
-if "start_time" not in st.session_state:
+# Default selection: next available day (not Sunday) at 1:00 PM – 3:00 PM
+if "selected_date" not in st.session_state or "start_time" not in st.session_state or "end_time" not in st.session_state:
+    now_local = datetime.now(STUDIO_TZ)
+    next_day = now_local + timedelta(days=1)
+    days_ahead = 1
+    while next_day.weekday() == 6:  # Skip Sundays
+        days_ahead += 1
+        next_day = now_local + timedelta(days=days_ahead)
+    st.session_state.selected_date = next_day.date()
     st.session_state.start_time = time(13, 0)
-if "end_time" not in st.session_state:
     st.session_state.end_time = time(15, 0)
 
 # ==================== SUCCESS HANDLING ====================
@@ -217,19 +221,6 @@ We can't wait to create something amazing with you!
 Covina, CA
                     """
                     msg.attach(MIMEText(body, 'plain'))
-
-                    if files:
-                        for file_path in files.split(","):
-                            if file_path and os.path.exists(file_path):
-                                with open(file_path, "rb") as attachment:
-                                    part = MIMEBase('application', 'octet-stream')
-                                    part.set_payload(attachment.read())
-                                    encoders.encode_base64(part)
-                                    part.add_header(
-                                        'Content-Disposition',
-                                        f'attachment; filename={os.path.basename(file_path)}'
-                                    )
-                                    msg.attach(part)
 
                     server = smtplib.SMTP('smtp.mail.me.com', 587)
                     server.starttls()
@@ -347,8 +338,8 @@ with st.form("booking_form", clear_on_submit=True):
         )
         st.session_state.selected_date = selected_date
 
-    # Time options: every 30 minutes from 12:00 to 19:30
-    time_options = [time(h, m) for h in range(12, 20) for m in (0, 30)]
+    # Time options: every 30 minutes from 12:00 to 20:00 (allows end at 8:00 PM)
+    time_options = [time(h, m) for h in range(12, 20) for m in (0, 30)] + [time(20, 0)]
     time_display = [t.strftime("%-I:%M %p") for t in time_options]
 
     with col_start:
@@ -420,7 +411,7 @@ with st.form("booking_form", clear_on_submit=True):
         start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
         end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
-        # Conflict check
+        # Conflict check - stricter overlap detection (no touching edges)
         c.execute("""
             SELECT name FROM bookings 
             WHERE deposit_paid = 1 
@@ -442,6 +433,55 @@ with st.form("booking_form", clear_on_submit=True):
             with open(path, "wb") as out:
                 out.write(f.getbuffer())
             saved_paths.append(path)
+
+        # Send studio notification email (tentative booking + references)
+        if ICLOUD_ENABLED:
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = ICLOUD_EMAIL
+                msg['To'] = STUDIO_EMAIL
+                msg['Subject'] = f"New Tattoo Booking Request – {name}"
+
+                display_time = f"{start_choice.strftime('%-I:%M %p')} – {end_choice.strftime('%-I:%M %p')}"
+                body = f"""
+New booking request received!
+
+Client: {name}
+Age: {age}
+Phone: {phone}
+Email: {email}
+
+Appointment: {selected_date.strftime('%A, %B %d, %Y')} | {display_time}
+
+Description:
+{description}
+
+Reference images attached (if any).
+
+Customer is now being redirected to pay the $150 deposit to confirm.
+                """
+                msg.attach(MIMEText(body, 'plain'))
+
+                if saved_paths:
+                    for file_path in saved_paths:
+                        if os.path.exists(file_path):
+                            with open(file_path, "rb") as attachment:
+                                part = MIMEBase('application', 'octet-stream')
+                                part.set_payload(attachment.read())
+                                encoders.encode_base64(part)
+                                part.add_header(
+                                    'Content-Disposition',
+                                    f'attachment; filename={os.path.basename(file_path)}'
+                                )
+                                msg.attach(part)
+
+                server = smtplib.SMTP('smtp.mail.me.com', 587)
+                server.starttls()
+                server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
+                server.sendmail(ICLOUD_EMAIL, STUDIO_EMAIL, msg.as_string())
+                server.quit()
+            except Exception as e:
+                st.warning("Booking saved, but studio notification email failed. Please check manually.")
 
         # Create Stripe session
         session = stripe.checkout.Session.create(
