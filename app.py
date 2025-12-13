@@ -215,7 +215,7 @@ with st.form("booking_form", clear_on_submit=True):
 
     _, center, _ = st.columns([1, 2.4, 1])
     with center:
-        submit = st.form_submit_button("PAY DEPOSIT → LOCK MY SLOT", use_container_width=True)
+        submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
