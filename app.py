@@ -116,12 +116,21 @@ st.markdown("""
     .fc-button-primary:hover { background: #00ff6c !important; }
     .fc-event { background: #ff4444; border: none; opacity: 0.9; }
 
-    /* Mobile responsiveness for calendar */
+    /* Mobile fixes for calendar toolbar and grid */
     @media (max-width: 768px) {
+        /* Stack toolbar chunks vertically and center */
+        .fc .fc-header-toolbar { flex-direction: column !important; gap: 8px; padding: 10px !important; }
+        .fc .fc-toolbar-chunk { display: flex !important; justify-content: center !important; width: 100% !important; }
+        .fc .fc-toolbar-chunk .fc-button-group { margin: 0 4px !important; }
+        .fc .fc-toolbar-title { font-size: 1.2rem !important; margin: 0 !important; }
+
+        /* Horizontal scroll for timegrid */
+        .fc .fc-timegrid-slots { overflow-x: auto !important; }
+        .fc .fc-timegrid-col { min-width: 70px !important; }
+
+        /* General overflow fixes */
         .fc .fc-scrollgrid-section-liquid > td { overflow: visible !important; }
         .fc .fc-timegrid-axis-frame { overflow: visible !important; }
-        .fc .fc-timegrid-slots { overflow-x: auto !important; }
-        .fc .fc-timegrid-col { min-width: 80px !important; }
     }
 </style>
 
@@ -268,14 +277,14 @@ calendar_options = {
     "slotMinTime": "12:00:00",
     "slotMaxTime": "20:00:00",
     "hiddenDays": [0],  # Hide Sundays
-    "height": "auto",  # Changed to auto for better responsiveness
+    "height": "auto",
+    "expandRows": True,
     "editable": False,
     "selectable": False,
-    "expandRows": True,  # Helps with mobile height
 }
 
 cal = calendar(events=events, options=calendar_options, key="availability_cal")
-st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).<br>On mobile, scroll horizontally if needed to see all days.</small>", unsafe_allow_html=True)
+st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).<br>On mobile, the header buttons will stack vertically and you can scroll horizontally to view all days if needed.</small>", unsafe_allow_html=True)
 
 # ==================== MAIN FORM ====================
 st.markdown("---")
