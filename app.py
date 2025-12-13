@@ -1,3 +1,4 @@
+# app.py ← FINAL VERSION: Lightning Fast + Low Memory + Perfect Look
 import streamlit as st
 import sqlite3
 import os
@@ -9,7 +10,7 @@ import streamlit.components.v1 as components
 import base64
 import requests
 
-st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="💉")
+st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
 # ==================== OPTIMIZED IMAGE LOADING ====================
 @st.cache_data(ttl=86400)
@@ -24,9 +25,9 @@ def img_b64(url):
 logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
 
 # Direct background URL — NO base64 bloat, CDN cached, instant
-BG_URL = "https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png"
+BG_URL = "#https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png"  # or .jpg if you compress it!
 
-# ==================== PERFECT CSS — OPTIMIZED FOR FULL-SCREEN FIT & PERFORMANCE ====================
+# ==================== PERFECT CSS — FIXED BACKGROUND WITHOUT LAG ====================
 st.markdown(f"""
 <style>
     /* Full fixed background using ::before (lightweight + smooth) */
@@ -44,7 +45,6 @@ st.markdown(f"""
         background: linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.88)),
                     url('{BG_URL}') center/cover no-repeat;
         background-attachment: fixed;
-        background-size: cover; /* Ensures it always covers the entire screen */
         z-index: -2;
         pointer-events: none;
     }}
