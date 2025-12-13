@@ -115,6 +115,14 @@ st.markdown("""
     .fc-button-primary { background: #00C853 !important; border: none !important; }
     .fc-button-primary:hover { background: #00ff6c !important; }
     .fc-event { background: #ff4444; border: none; opacity: 0.9; }
+
+    /* Mobile responsiveness for calendar */
+    @media (max-width: 768px) {
+        .fc .fc-scrollgrid-section-liquid > td { overflow: visible !important; }
+        .fc .fc-timegrid-axis-frame { overflow: visible !important; }
+        .fc .fc-timegrid-slots { overflow-x: auto !important; }
+        .fc .fc-timegrid-col { min-width: 80px !important; }
+    }
 </style>
 
 <div style="text-align:center;padding:0px 0 15px 0; margin-top:-20px;">
@@ -260,13 +268,14 @@ calendar_options = {
     "slotMinTime": "12:00:00",
     "slotMaxTime": "20:00:00",
     "hiddenDays": [0],  # Hide Sundays
-    "height": "600px",
+    "height": "auto",  # Changed to auto for better responsiveness
     "editable": False,
     "selectable": False,
+    "expandRows": True,  # Helps with mobile height
 }
 
 cal = calendar(events=events, options=calendar_options, key="availability_cal")
-st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).</small>", unsafe_allow_html=True)
+st.markdown("<small>Red blocks = booked appointments. Studio open 12 PM – 8 PM (closed Sundays).<br>On mobile, scroll horizontally if needed to see all days.</small>", unsafe_allow_html=True)
 
 # ==================== MAIN FORM ====================
 st.markdown("---")
