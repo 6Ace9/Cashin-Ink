@@ -479,7 +479,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# RESTORE NATURAL SCROLL & BOTTOM GLOW — EXACTLY AS ORIGINAL
+# RESTORE NATURAL SCROLL & BOTTOM GLOW + MOBILE FOOTER FIX
 st.markdown("""
 <style>
     /* Allow natural scrolling and keep bottom glow visible */
@@ -489,9 +489,20 @@ st.markdown("""
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
+        flex: 1 !important;
     }
-    /* Only hide Streamlit's default footer, nothing else */
+    /* Only hide Streamlit's default footer */
     footer, [data-testid="stFooter"] { display: none !important; }
+
+    /* MOBILE FIX: Extra padding at bottom to compensate for dynamic address bar */
+    @media (max-width: 768px) {
+        .stApp {
+            padding-bottom: 100px !important;  /* Increase to 120px if still slightly clipped */
+        }
+        /* Optional: Slightly reduce top margin on mobile for better balance */
+        .main {
+            margin-top: 40px !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
