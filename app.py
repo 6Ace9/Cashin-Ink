@@ -280,7 +280,14 @@ END:VCALENDAR""".format(
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
-<div style="text-align:center;padding:40px 0 20px;color:#666;font-size:14px;">
+<div style="text-align:center;padding:40px 0 30px;color:#666;font-size:14px;">
     © 2025 Cashin Ink — Covina, CA
 </div>
+
+<style>
+    /* DIE, EMPTY SPACE, DIE */
+    .main > .block-container { padding-bottom: 0 !important; }
+    footer { visibility: hidden !important; }
+    section.main { margin-bottom: -100px !important; }
+</style>
 """, unsafe_allow_html=True)
