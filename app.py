@@ -127,6 +127,12 @@ st.markdown("""
     .fc-event.booked { background: #ff4444; border: none; opacity: 0.9; }
     .fc-event.tentative { background: #00C853; border: none; opacity: 0.7; color: black; font-weight: bold; }
 
+        /* Force visible separator line below header on all devices */
+    .fc .fc-toolbar { border-bottom: 1px solid #00C85380 !important; }
+
+    /* Stronger global border color (fallback if variable doesn't apply everywhere on mobile) */
+    .fc-theme-standard td, .fc-theme-standard th { border-color: #00C85380 !important; }
+
     /* Mobile responsiveness */
     @media (max-width: 768px) {
         .main { margin: 20px auto; padding: 20px; max-width: 95%; }
