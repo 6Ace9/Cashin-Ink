@@ -82,7 +82,7 @@ st.markdown("""
     .stTextArea>div>div>textarea,
     .stNumberInput>div>div>input,
     .stDateInput>div>div>input,
-    .stTimeInput>div>div>input {
+    .stSelectbox>div>div>select {
         background: rgba(40,40,45,0.9)!important;
         border: 1px solid #00C85340!important;
         border-radius: 14px!important;
@@ -163,8 +163,6 @@ if "appt_end_time_str" not in st.session_state:
     st.session_state.appt_end_time_str = "15:00"
 
 # ==================== SUCCESS HANDLING ====================
-# (unchanged - same as previous version)
-
 if st.query_params.get("success") == "1":
     session_id = st.query_params.get("session_id")
     
@@ -234,8 +232,6 @@ Covina, CA
     st.stop()
 
 # ==================== AVAILABILITY CALENDAR ====================
-# (unchanged)
-
 st.markdown("### Check Availability")
 c.execute("SELECT name, start_dt, end_dt FROM bookings WHERE deposit_paid = 1")
 booked = c.fetchall()
@@ -298,6 +294,7 @@ with st.form("booking_form", clear_on_submit=True):
 
     col_date, col_start, col_end = st.columns(3)
 
+    # Date picker (unchanged)
     with col_date:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Date</small>", unsafe_allow_html=True)
         min_date = datetime.now(STUDIO_TZ).date() + timedelta(days=1)
@@ -315,42 +312,56 @@ with st.form("booking_form", clear_on_submit=True):
         )
         st.session_state.appt_date_str = selected_date.strftime("%Y-%m-%d")
 
+    # Generate 30-minute slots from 12:00 PM to 7:30 PM (to allow up to 8:00 PM end)
+    time_options = []
+    display_options = []
+    start_hour = 12
+    end_hour = 19  # up to 19:30 for end time up to 20:00
+    for hour in range(start_hour, end_hour + 1):
+        for minute in [0, 30]:
+            t = time(hour % 24, minute)
+            time_options.append(t)
+            display_options.append(t.strftime("%-I:%M %p"))
+
+    # Start Time picker - 12-hour AM/PM dropdown
     with col_start:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
         try:
             default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
+            start_index = time_options.index(default_start) if default_start in time_options else 2  # default ~1:00 PM
         except:
-            default_start = time(13, 0)
-        # Force 12-hour AM/PM format with 30-minute steps
-        start_time = st.time_input(
+            start_index = 2
+        selected_start_display = st.selectbox(
             "",
-            value=default_start,
-            step=timedelta(minutes=30),
-            key="appt_start_input",
-            help="Select in 30-minute increments (12-hour format with AM/PM)"
+            options=display_options,
+            index=start_index,
+            key="start_time_select"
         )
-        st.session_state.appt_start_time_str = start_time.strftime("%H:%M")
+        selected_start_time = time_options[display_options.index(selected_start_display)]
+        st.session_state.appt_start_time_str = selected_start_time.strftime("%H:%M")
 
+    # End Time picker - 12-hour AM/PM dropdown
     with col_end:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>End Time</small>", unsafe_allow_html=True)
         try:
             default_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
+            end_index = time_options.index(default_end) if default_end in time_options else 6  # default ~3:00 PM
         except:
-            default_end = time(15, 0)
-        end_time = st.time_input(
+            end_index = 6
+        selected_end_display = st.selectbox(
             "",
-            value=default_end,
-            step=timedelta(minutes=30),
-            key="appt_end_input",
-            help="Select in 30-minute increments (12-hour format with AM/PM)"
+            options=display_options,
+            index=end_index,
+            key="end_time_select"
         )
-        st.session_state.appt_end_time_str = end_time.strftime("%H:%M")
+        selected_end_time = time_options[display_options.index(selected_end_display)]
+        st.session_state.appt_end_time_str = selected_end_time.strftime("%H:%M")
 
     # Parse for validation
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
-        appt_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
-        appt_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
+        appt_start = selected_start_time
+        appt_end = selected_end_time
     except:
         appt_date = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
         appt_start = time(13, 0)
@@ -373,7 +384,6 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
-        # (rest of submit logic unchanged - same as previous)
         if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
             st.error("Please fill all required fields")
             st.stop()
@@ -479,7 +489,7 @@ st.markdown("""
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important;
+        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
     }
     /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
