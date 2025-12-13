@@ -92,7 +92,7 @@ st.markdown("""
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 </style>
 
-<div style="text-align:center;padding:30px 0 30px 0;">
+<div style="text-align:center;padding:15px 0 30px 0;">
     <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
     <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
