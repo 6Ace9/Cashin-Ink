@@ -16,6 +16,8 @@ st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo
 
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+
     html, body, [class*="css"]  { height: 100%; margin: 0; padding: 0; }
     .stApp {
         background: url("https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/background.png")
@@ -55,10 +57,37 @@ st.markdown("""
     }
 
     @keyframes glow {
-        from { filter: drop-shadow(0 0 20px #00C853); }
-        to   { filter: drop-shadow(0 0 45px #00C853); }
+        from { 
+            text-shadow: 
+                0 0 10px #00C853,
+                0 0 20px #00C853,
+                0 0 40px #00ff6c,
+                0 0 60px #00ff6c;
+        }
+        to   { 
+            text-shadow: 
+                0 0 20px #00C853,
+                0 0 30px #00C853,
+                0 0 50px #00ff6c,
+                0 0 80px #00ff6c;
+        }
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
+
+    .cashin-header {
+        margin-top: 20px;
+        color: #000000 !important;
+        font-family: 'Dancing Script', cursive !important;
+        font-weight: 700;
+        font-size: 3.2rem !important;
+        letter-spacing: 3px;
+        animation: glow 4s ease-in-out infinite alternate;
+        text-shadow: 
+            0 0 10px #00C853,
+            0 0 20px #00C853,
+            0 0 40px #00ff6c,
+            0 0 60px #00ff6c;
+    }
 
     .stTextInput>div>div>input,
     .stTextArea>div>div>textarea,
@@ -95,9 +124,7 @@ st.markdown("""
 <div style="text-align:center;padding:5px 0 30px 0;">
     <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
-    <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
-        Cashin Ink
-    </h3>
+    <h3 class="cashin-header">Cashin Ink</h3>
 </div>
 
 <div class="main">
