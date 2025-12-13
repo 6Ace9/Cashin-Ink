@@ -80,7 +80,9 @@ st.markdown("""
 
     .stTextInput>div>div>input,
     .stTextArea>div>div>textarea,
-    .stNumberInput>div>div>input {
+    .stNumberInput>div>div>input,
+    .stDateInput>div>div>input,
+    .stTimeInput>div>div>input {
         background: rgba(40,40,45,0.9)!important;
         border: 1px solid #00C85340!important;
         border-radius: 14px!important;
@@ -263,6 +265,9 @@ calendar_options = {
     "height": "600px",
     "editable": False,
     "selectable": False,
+    "validRange": {
+        "start": (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
+    }
 }
 
 cal = calendar(events=events, options=calendar_options, key="availability_cal")
@@ -288,53 +293,47 @@ with st.form("booking_form", clear_on_submit=True):
     if uploaded:
         st.session_state.uploaded_files = uploaded
 
-    st.markdown("### Select Date & Start/End Time")
+    st.markdown("### Select Date & Time Slot")
 
-    dc, tc1, tc2 = st.columns(3)
-    
-    with dc:
+    col_date, col_start, col_end = st.columns(3)
+
+    with col_date:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Date</small>", unsafe_allow_html=True)
-        components.html(f"""
-        <input type="date" id="d" value="{st.session_state.appt_date_str}"
-               min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
-               max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
-                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=72)
-    
-    with tc1:
+        min_date = datetime.now(STUDIO_TZ).date() + timedelta(days=1)
+        max_date = min_date + timedelta(days=90)
+        default_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
+        selected_date = st.date_input(
+            "",
+            value=default_date,
+            min_value=min_date,
+            max_value=max_date,
+            key="appt_date_input"
+        )
+        st.session_state.appt_date_str = selected_date.strftime("%Y-%m-%d")
+
+    with col_start:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
-        components.html(f"""
-        <input type="time" id="start" value="{st.session_state.appt_start_time_str}" step="1800"
-               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
-                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=72)
-    
-    with tc2:
+        default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
+        start_time = st.time_input(
+            "",
+            value=default_start,
+            step=timedelta(minutes=30),
+            key="appt_start_input"
+        )
+        st.session_state.appt_start_time_str = start_time.strftime("%H:%M")
+
+    with col_end:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>End Time</small>", unsafe_allow_html=True)
-        components.html(f"""
-        <input type="time" id="end" value="{st.session_state.appt_end_time_str}" step="1800"
-               style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
-                      border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=72)
+        default_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
+        end_time = st.time_input(
+            "",
+            value=default_end,
+            step=timedelta(minutes=30),
+            key="appt_end_input"
+        )
+        st.session_state.appt_end_time_str = end_time.strftime("%H:%M")
 
-    components.html("""
-    <script>
-        document.getElementById('d')?.addEventListener('change', e => parent.streamlit.setComponentValue({date: e.target.value}));
-        document.getElementById('start')?.addEventListener('change', e => parent.streamlit.setComponentValue({start: e.target.value}));
-        document.getElementById('end')?.addEventListener('change', e => parent.streamlit.setComponentValue({end: e.target.value}));
-    </script>
-    """, height=0)
-
-    if st.session_state.get("streamlit_component_value"):
-        v = st.session_state.streamlit_component_value
-        if v.get("date"):
-            st.session_state.appt_date_str = v["date"]
-        if v.get("start"):
-            st.session_state.appt_start_time_str = v["start"]
-        if v.get("end"):
-            st.session_state.appt_end_time_str = v["end"]
-
+    # Parse selected values
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
@@ -387,7 +386,7 @@ with st.form("booking_form", clear_on_submit=True):
         start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
         end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
-        # Conflict detection (overlapping with any confirmed booking)
+        # Conflict detection
         c.execute("""
             SELECT name FROM bookings 
             WHERE deposit_paid = 1 
@@ -399,12 +398,14 @@ with st.form("booking_form", clear_on_submit=True):
             st.error(f"❌ This time overlaps with an existing booking ({conflict[0]}). Please choose another slot.")
             st.stop()
 
-        # Create booking ID and save files
+        # Save uploaded files securely
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
         saved_paths = []
+        import secrets
         for f in st.session_state.uploaded_files:
-            safe_filename = "".join(c for c in f.name if c.isalnum() or c in "._- ")
+            ext = os.path.splitext(f.name)[1]
+            safe_filename = f"{secrets.token_hex(8)}{ext}"
             path = f"{UPLOAD_DIR}/{bid}/{safe_filename}"
             with open(path, "wb") as out:
                 out.write(f.getbuffer())
@@ -440,8 +441,11 @@ with st.form("booking_form", clear_on_submit=True):
         ))
         conn.commit()
 
-        # Clear uploaded files
+        # Reset form state
         st.session_state.uploaded_files = []
+        st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
+        st.session_state.appt_start_time_str = "13:00"
+        st.session_state.appt_end_time_str = "15:00"
 
         st.success("✅ Slot reserved! Redirecting to secure payment...")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
@@ -460,16 +464,14 @@ st.markdown("""
 # RESTORE NATURAL SCROLL & BOTTOM GLOW
 st.markdown("""
 <style>
-    /* Allow natural scrolling and keep bottom glow visible */
     .stApp {
         display: flex !important;
         flex-direction: column !important;
         min-height: 100vh !important;
     }
     .main {
-        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
+        flex: 1 !important;
     }
-    /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
