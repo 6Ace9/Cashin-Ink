@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
-st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
+st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="💉")
 
 st.markdown("""
 <style>
@@ -130,8 +130,9 @@ if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
     ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
 
-SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
-CANCEL_URL = "https://cashin-ink.streamlit.app"
+BASE_URL = "https://cashin-ink.streamlit.app"
+SUCCESS_URL = f"{BASE_URL}/?success=1&session_id={{CHECKOUT_SESSION_ID}}"
+CANCEL_URL = BASE_URL
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
@@ -142,19 +143,86 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state:
+    st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state:
+    st.session_state.appt_time_str = "13:00"
 
-# SUCCESS PAGE
+# ==================== SUCCESS HANDLING ====================
 if st.query_params.get("success") == "1":
-    st.balloons()
-    st.success("Payment Confirmed! Your slot is locked.")
-    st.info("Julio will contact you within 24 hours. Thank you!")
-    # ... (your calendar code — already perfect)
+    session_id = st.query_params.get("session_id")
+    
+    if session_id:
+        c.execute("SELECT name, email, date, time, files FROM bookings WHERE stripe_session_id = ? AND deposit_paid = 0", (session_id,))
+        booking = c.fetchone()
+        
+        if booking:
+            name, email, appt_date, appt_time, files = booking
+            
+            # Mark as paid
+            c.execute("UPDATE bookings SET deposit_paid = 1 WHERE stripe_session_id = ?", (session_id,))
+            conn.commit()
+            
+            # Send confirmation email
+            if ICLOUD_ENABLED and email:
+                try:
+                    msg = MIMEMultipart()
+                    msg['From'] = ICLOUD_EMAIL
+                    msg['To'] = email
+                    msg['Subject'] = "Cashin Ink — Your Appointment is Confirmed!"
+
+                    body = f"""
+Thank you {name}!
+
+Your tattoo appointment has been successfully booked and your $150 deposit is confirmed.
+
+📅 Date: {appt_date}
+🕒 Time: {appt_time}
+
+Julio will reach out within 24 hours to discuss your design and finalize details.
+
+We can't wait to create something amazing with you!
+
+— Cashin Ink Team
+Covina, CA
+                    """
+                    msg.attach(MIMEText(body, 'plain'))
+
+                    # Attach reference images
+                    if files:
+                        for file_path in files.split(","):
+                            if file_path and os.path.exists(file_path):
+                                with open(file_path, "rb") as attachment:
+                                    part = MIMEBase('application', 'octet-stream')
+                                    part.set_payload(attachment.read())
+                                    encoders.encode_base64(part)
+                                    part.add_header(
+                                        'Content-Disposition',
+                                        f'attachment; filename={os.path.basename(file_path)}'
+                                    )
+                                    msg.attach(part)
+
+                    server = smtplib.SMTP('smtp.mail.me.com', 587)
+                    server.starttls()
+                    server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
+                    server.sendmail(ICLOUD_EMAIL, email, msg.as_string())
+                    server.quit()
+                except Exception as e:
+                    st.warning("Payment confirmed, but confirmation email failed to send. We'll still contact you soon!")
+
+            st.balloons()
+            st.success("Payment Confirmed! Your slot is officially locked. 🎉")
+            st.info("Julio will contact you within 24 hours to discuss your tattoo. Thank you!")
+        else:
+            st.error("Invalid or already processed payment session.")
+    else:
+        st.error("No payment session found.")
+
     st.stop()
 
-# MAIN FORM
+# ==================== MAIN FORM ====================
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
 st.info("Non-refundable • Locks your slot")
@@ -171,7 +239,8 @@ with st.form("booking_form", clear_on_submit=True):
     description = st.text_area("Tattoo Idea* (size, placement, style)", height=140)
 
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded: st.session_state.uploaded_files = uploaded
+    if uploaded:
+        st.session_state.uploaded_files = uploaded
 
     st.markdown("### Select Date & Time")
 
@@ -200,8 +269,10 @@ with st.form("booking_form", clear_on_submit=True):
 
     if st.session_state.get("streamlit_component_value"):
         v = st.session_state.streamlit_component_value
-        if v.get("date"): st.session_state.appt_date_str = v["date"]
-        if v.get("time"): st.session_state.appt_time_str = v["time"]
+        if v.get("date"):
+            st.session_state.appt_date_str = v["date"]
+        if v.get("time"):
+            st.session_state.appt_time_str = v["time"]
 
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
@@ -210,8 +281,11 @@ with st.form("booking_form", clear_on_submit=True):
         appt_date = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    if appt_date.weekday() == 6: st.error("Closed on Sundays")
-    if appt_time.hour < 12 or appt_time.hour > 20: st.error("Open 12 PM – 8 PM only")
+    # Validation feedback
+    if appt_date.weekday() == 6:
+        st.error("❌ Closed on Sundays — please choose another day")
+    if appt_time.hour < 12 or appt_time.hour > 20:
+        st.error("❌ Studio open 12 PM – 8 PM only")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -220,30 +294,61 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
-        if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Invalid date/time"); st.stop()
-        if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Please fill all fields"); st.stop()
+        # Final validation
+        if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
+            st.error("Please fill all required fields")
+            st.stop()
+        if age < 18:
+            st.error("Must be 18 or older")
+            st.stop()
+        if not agree:
+            st.error("You must agree to the non-refundable deposit")
+            st.stop()
+        if appt_date.weekday() == 6:
+            st.error("Cannot book on Sundays")
+            st.stop()
+        if appt_time.hour < 12 or appt_time.hour > 20:
+            st.error("Time must be between 12 PM and 8 PM")
+            st.stop()
 
-        start_dt = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
-        end_dt = start_dt + timedelta(hours=2)
+        start_dt_local = STUDIO_TZ.localize(datetime.combine(appt_date, appt_time))
+        end_dt_local = start_dt_local + timedelta(hours=2)
 
-        conflict = c.execute("SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
-                          (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())).fetchone()
+        start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
+        end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
+
+        # Conflict detection (only check confirmed bookings)
+        conflict = c.execute(
+            "SELECT name FROM bookings WHERE deposit_paid = 1 AND start_dt < ? AND end_dt > ?",
+            (end_utc, start_utc)
+        ).fetchone()
+
         if conflict:
-            st.error(f"Slot taken by {conflict[0]}"); st.stop()
+            st.error(f"❌ This slot is already taken by {conflict[0]}. Please choose another time.")
+            st.stop()
 
+        # Create booking ID and save files
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
-        paths = []
+        saved_paths = []
         for f in st.session_state.uploaded_files:
-            path = f"{UPLOAD_DIR}/{bid}/{f.name}"
-            with open(path, "wb") as out: out.write(f.getbuffer())
-            paths.append(path)
+            safe_filename = "".join(c for c in f.name if c.isalnum() or c in "._- ")
+            path = f"{UPLOAD_DIR}/{bid}/{safe_filename}"
+            with open(path, "wb") as out:
+                out.write(f.getbuffer())
+            saved_paths.append(path)
 
+        # Create Stripe session
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"Deposit – {name}"},
+                    "unit_amount": 15000
+                },
+                "quantity": 1
+            }],
             mode="payment",
             success_url=SUCCESS_URL,
             cancel_url=CANCEL_URL,
@@ -251,30 +356,36 @@ with st.form("booking_form", clear_on_submit=True):
             customer_email=email
         )
 
-        c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
+        # Save tentative booking (deposit_paid = 0)
+        c.execute("""INSERT INTO bookings 
+                     (id, name, age, phone, email, description, date, time, start_dt, end_dt, 
+                      deposit_paid, stripe_session_id, files, created_at)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
             bid, name, age, phone, email, description,
             str(appt_date), appt_time.strftime("%-I:%M %p"),
-            start_dt.astimezone(pytz.UTC).isoformat(),
-            end_dt.astimezone(pytz.UTC).isoformat(),
-            0, session.id, ",".join(paths), datetime.utcnow().isoformat()
+            start_utc, end_utc,
+            0, session.id, ",".join(saved_paths), datetime.utcnow().isoformat()
         ))
         conn.commit()
 
-        st.success("Redirecting to payment…")
+        # Clear uploaded files after successful submission
+        st.session_state.uploaded_files = []
+
+        st.success("✅ Slot reserved! Redirecting to secure payment...")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# WHITE FOOTER — NO SPACE BELOW
+# WHITE FOOTER
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
 
-# FINAL KILL SWITCH — 100% NO BOTTOM SPACE
+# FINAL NO BOTTOM SPACE
 st.markdown("""
 <style>
     .stApp { padding-bottom: 0px !important; margin-bottom: 0px !important; }
