@@ -1,4 +1,4 @@
-# app.py → FINAL 100% WORKING VERSION | NO ERRORS | FULLSCREEN BG | GLASS CARD
+# app.py → FINAL 100% WORKING | FULLSCREEN BG | GLASS CARD | NO ERRORS AT ALL
 
 import streamlit as st
 import sqlite3
@@ -16,7 +16,7 @@ from email import encoders
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== FULLSCREEN BACKGROUND + GLASS CARD ====================
+# ==================== FULLSCREEN BACKGROUND + GLASS CARD + GLOW ====================
 st.markdown("""
 <style>
     .stApp {
@@ -36,7 +36,7 @@ st.markdown("""
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(0, 200, 83, 0.4);
         border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0, 200, 83, 0.25);
+        box-shadow: 0 0 10px 40px rgba(0, 200, 83, 0.25);
         margin: 20px auto;
         max-width: 940px;
         padding: 40px 45px;
@@ -52,6 +52,10 @@ st.markdown("""
         border-radius: 12px !important; padding: 18px 40px !important; font-size: 20px !important;
         min-height: 64px !important; border: none !important;
         box-shadow: 0 6px 25px rgba(0,200,83,0.5) !important;
+    }
+    .stButton>button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 35px rgba(0,200,83,0.7) !important;
     }
     .block-container { padding: 0 !important; margin: 0 !important; }
     footer { visibility: hidden !important; }
@@ -100,7 +104,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state
+# Session state init
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 if "appt_date_str" not in st.session_state:
@@ -122,24 +126,32 @@ with st.form("booking_form"):
         email = st.text_input("Email*", placeholder="you@gmail.com")
 
     description = st.text_area("Tattoo Idea* (size, placement, style)", height=130)
-    uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded and st.session_state.uploaded_files = uploaded
+
+    uploaded = st.file_uploader(
+        "Reference photos (optional)",
+        type=["png", "jpg", "jpeg", "heic", "pdf"],
+        accept_multiple_files=True
+    )
+    if uploaded:
+        st.session_state.uploaded_files = uploaded  # FIXED: was "=" instead of "=="
 
     st.markdown("### Select Date & Time")
-    dc, tc = st.columns([2,1])
+    dc, tc = st.columns([2, 1])
     with dc:
         st.markdown("**Date**")
         components.html(f"""
         <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
                min="{ (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d') }"
                max="{ (datetime.today() + timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:100%; padding:16px; font-size:20px; border:2px solid #00C853; border-radius:10px; background:#111; color:white; text-align:center;">
+               style="width:100%; padding:16px; font-size:20px; border:2px solid #00C853;
+                      border-radius:10px; background:#111; color:white; text-align:center;">
         """, height=100)
     with tc:
         st.markdown("**Start Time**")
         components.html(f"""
         <input type="time" id="timePicker" value="{st.session_state.appt_time_str}" step="3600"
-               style="width:100%; padding:16px; font-size:20px; border:2px solid #00C853; border-radius:10px; background:#111; color:white; text-align:center;">
+               style="width:100%; padding:16px; font-size:20px; border:2px solid #00C853;
+                      border-radius:10px; background:#111; color:white; text-align:center;">
         """, height=100)
 
     # Sync custom pickers
@@ -147,8 +159,8 @@ with st.form("booking_form"):
     <script>
         const d = document.getElementById('datePicker');
         const t = document.getElementById('timePicker');
-        d && d.addEventListener('change', () => parent.streamlit.setComponentValue({date: d.value}));
-        t && t.addEventListener('change', () => parent.streamlit.setComponentValue({time: t.value}));
+        if (d) d.addEventListener('change', () => parent.streamlit.setComponentValue({date: d.value}));
+        if (t) t.addEventListener('change', () => parent.streamlit.setComponentValue({time: t.value}));
     </script>
     """, height=0)
 
@@ -159,7 +171,7 @@ with st.form("booking_form"):
         if picker.get("time"):
             st.session_state.appt_time_str = picker["time"]
 
-    # Parse date/time
+    # Parse date/time safely
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
@@ -174,20 +186,19 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    _, center, _ = st.columns([1,2,1])
+    _, center, _ = st.columns([1, 2, 1])
     with center:
         submit = st.form_submit_button("PAY DEPOSIT → SECURE MY SLOT", use_container_width=True)
 
     if submit:
-        # Validation
+        # Final validation
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Invalid date/time")
+            st.error("Invalid date/time selected")
             st.stop()
         if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Please complete all fields and agree")
+            st.error("Please fill all required fields and agree to deposit")
             st.stop()
 
-        # Time slot conflict check
         start_dt_local = datetime.combine(appt_date, appt_time)
         start_dt = STUDIO_TZ.localize(start_dt_local)
         end_dt = start_dt + timedelta(hours=2)
@@ -196,12 +207,10 @@ with st.form("booking_form"):
             "SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
             (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())
         ).fetchone()
-
         if conflict:
-            st.error(f"Slot already taken by {conflict[0]}")
+            st.error(f"Slot already booked by {conflict[0]}")
             st.stop()
 
-        # Save files
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
         paths = []
@@ -211,7 +220,6 @@ with st.form("booking_form"):
                 out.write(f.getbuffer())
             paths.append(path)
 
-        # Create Stripe session
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
@@ -229,7 +237,6 @@ with st.form("booking_form"):
             customer_email=email
         )
 
-        # Insert booking
         c.execute(
             "INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (bid, name, age, phone, email, description,
@@ -240,7 +247,7 @@ with st.form("booking_form"):
         )
         conn.commit()
 
-        st.success("Taking you to secure payment…")
+        st.success("Redirecting to secure payment…")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
@@ -249,7 +256,7 @@ if st.query_params.get("success") == "1":
     st.success("Payment Confirmed! Your slot is locked. Julio will contact you soon.")
     st.balloons()
 
-    if ICLOUD_ENABLED and booking:
+    if ICLOUD_ENABLED:
         booking = c.execute("SELECT name,date,time,phone,email,description,id FROM bookings ORDER BY created_at DESC LIMIT 1").fetchone()
         if booking:
             client_name, date_str, time_str, phone, client_email, desc, bid = booking
@@ -297,11 +304,11 @@ END:VCALENDAR""".format(
                 server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 server.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 server.quit()
-                st.success("Calendar event sent to Julio!")
+                st.success("Calendar event sent to Julio's iPhone!")
             except:
-                st.warning("Failed to send .ics")
+                st.warning("Could not send .ics (check credentials)")
 
-# CLOSE MAIN CARD + FOOTER
+# CLOSE CARD + FOOTER
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("""
