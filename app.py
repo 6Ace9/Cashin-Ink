@@ -108,7 +108,11 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    footer, [data-testid="stFooter"] { display:none!important; }
+    /* KILL EVERYTHING AT BOTTOM - ORIGINAL STYLE */
+    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
+    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
+    section.main { margin-bottom:0!important; padding-bottom:0!important; }
+    .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 
     /* Calendar custom styling */
     .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
@@ -159,12 +163,12 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state initialization - FIXED
+# Session state initialization
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
-# Set defaults ONLY if none of the three keys exist
-if not any(key in st.session_state for key in ["selected_date", "start_time", "end_time"]):
+# FIX: Set defaults only once on first load
+if "selected_date" not in st.session_state:
     now_local = datetime.now(STUDIO_TZ)
     next_day = now_local + timedelta(days=1)
     days_ahead = 1
@@ -374,7 +378,6 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
-        # Final validation (same as before)
         if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
             st.error("Please fill all required fields")
             st.stop()
@@ -504,10 +507,21 @@ Customer is now being redirected to pay the $150 deposit to confirm.
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
+# CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
+# WHITE FOOTER - ORIGINAL
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
+""", unsafe_allow_html=True)
+
+# ORIGINAL NATURAL SCROLL FIX
+st.markdown("""
+<style>
+    .stApp { display: flex !important; flex-direction: column !important; min-height: 100vh !important; }
+    .main { flex: 1 !important; }
+    footer, [data-testid="stFooter"] { display: none !important; }
+</style>
 """, unsafe_allow_html=True)
