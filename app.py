@@ -52,11 +52,6 @@ st.markdown("""
         flex: 1;
     }
 
-    @keyframes pulseGlow {
-        from { box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px rgba(0,200,83,0.4), 0 0 60px rgba(0,255,100,0.25), inset 0 0 20px rgba(0,255,100,0.1); }
-        to   { box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 40px rgba(0,200,83,0.6), 0 0 80px rgba(0,255,100,0.4), inset 0 0 30px rgba(0,255,100,0.15); }
-    }
-
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
         to   { filter: drop-shadow(0 0 45px #00C853); }
@@ -113,11 +108,7 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL EVERYTHING AT BOTTOM */
-    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
-    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
-    section.main { margin-bottom:0!important; padding-bottom:0!important; }
-    .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
+    footer, [data-testid="stFooter"] { display:none!important; }
 
     /* Calendar custom styling */
     .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
@@ -153,7 +144,7 @@ ICLOUD_ENABLED = "ICLOUD_EMAIL" in st.secrets and "ICLOUD_APP_PASSWORD" in st.se
 if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
     ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
-    STUDIO_EMAIL = ICLOUD_EMAIL  # Assume studio email is the same iCloud account
+    STUDIO_EMAIL = ICLOUD_EMAIL
 
 BASE_URL = "https://cashin-ink.streamlit.app"
 SUCCESS_URL = f"{BASE_URL}/?success=1&session_id={{CHECKOUT_SESSION_ID}}"
@@ -168,13 +159,12 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state initialization
+# Session state initialization - FIXED
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
-# Default selection: next available day (not Sunday) at 1:00 PM – 3:00 PM
-# Only set if not already set (prevents resetting on every rerun)
-if "selected_date" not in st.session_state:
+# Set defaults ONLY if none of the three keys exist
+if not any(key in st.session_state for key in ["selected_date", "start_time", "end_time"]):
     now_local = datetime.now(STUDIO_TZ)
     next_day = now_local + timedelta(days=1)
     days_ahead = 1
@@ -261,7 +251,7 @@ for name, start_utc, end_utc in booked:
         "classNames": ["booked"]
     })
 
-# Add tentative selection as green highlighted block (only if valid)
+# Add tentative selection
 selected_start_local = STUDIO_TZ.localize(datetime.combine(st.session_state.selected_date, st.session_state.start_time))
 selected_end_local = STUDIO_TZ.localize(datetime.combine(st.session_state.selected_date, st.session_state.end_time))
 
@@ -339,9 +329,7 @@ with st.form("booking_form", clear_on_submit=True):
         )
         st.session_state.selected_date = selected_date
 
-    # Time options: every 30 minutes from 12:00 to 20:00 (allows end at 8:00 PM)
     time_options = [time(h, m) for h in range(12, 20) for m in (0, 30)] + [time(20, 0)]
-    time_display = [t.strftime("%-I:%M %p") for t in time_options]
 
     with col_start:
         start_idx = time_options.index(st.session_state.start_time) if st.session_state.start_time in time_options else 2
@@ -386,7 +374,7 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
-        # Final validation
+        # Final validation (same as before)
         if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
             st.error("Please fill all required fields")
             st.stop()
@@ -412,7 +400,6 @@ with st.form("booking_form", clear_on_submit=True):
         start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
         end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
-        # Conflict check - stricter overlap detection (no touching edges)
         c.execute("""
             SELECT name FROM bookings 
             WHERE deposit_paid = 1 
@@ -424,7 +411,6 @@ with st.form("booking_form", clear_on_submit=True):
             st.error(f"❌ This time overlaps with an existing booking ({conflict[0]}). Please choose another slot.")
             st.stop()
 
-        # Save files
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
         saved_paths = []
@@ -435,7 +421,6 @@ with st.form("booking_form", clear_on_submit=True):
                 out.write(f.getbuffer())
             saved_paths.append(path)
 
-        # Send studio notification email (tentative booking + references)
         if ICLOUD_ENABLED:
             try:
                 msg = MIMEMultipart()
@@ -484,7 +469,6 @@ Customer is now being redirected to pay the $150 deposit to confirm.
             except Exception as e:
                 st.warning("Booking saved, but studio notification email failed. Please check manually.")
 
-        # Create Stripe session
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
@@ -502,7 +486,6 @@ Customer is now being redirected to pay the $150 deposit to confirm.
             customer_email=email
         )
 
-        # Save tentative booking
         display_time = f"{start_choice.strftime('%-I:%M %p')} – {end_choice.strftime('%-I:%M %p')}"
         c.execute("""INSERT INTO bookings 
                      (id, name, age, phone, email, description, date, time, start_dt, end_dt, 
@@ -521,21 +504,10 @@ Customer is now being redirected to pay the $150 deposit to confirm.
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# WHITE FOOTER
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
-""", unsafe_allow_html=True)
-
-# RESTORE NATURAL SCROLL
-st.markdown("""
-<style>
-    .stApp { display: flex !important; flex-direction: column !important; min-height: 100vh !important; }
-    .main { flex: 1 !important; }
-    footer, [data-testid="stFooter"] { display: none !important; }
-</style>
 """, unsafe_allow_html=True)
