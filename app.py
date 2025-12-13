@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-from streamlit_calendar import calendar  # NEW IMPORT
+from streamlit_calendar import calendar
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="💉")
 
@@ -50,11 +50,6 @@ st.markdown("""
         max-width: 960px;
         padding: 25px;
         flex: 1;
-    }
-
-    @keyframes pulseGlow {
-        from { box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px rgba(0,200,83,0.4), 0 0 60px rgba(0,255,100,0.25), inset 0 0 20px rgba(0,255,100,0.1); }
-        to   { box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 40px rgba(0,200,83,0.6), 0 0 80px rgba(0,255,100,0.4), inset 0 0 30px rgba(0,255,100,0.15); }
     }
 
     @keyframes glow {
@@ -105,13 +100,9 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL EVERYTHING AT BOTTOM — 100% GONE */
-    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
-    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
-    section.main { margin-bottom:0!important; padding-bottom:0!important; }
-    .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
+    footer, [data-testid="stFooter"] { display:none!important; }
 
-    /* Calendar custom styling to match theme */
+    /* Calendar styling */
     .fc { background: rgba(30,30,35,0.8); border-radius: 16px; color: white; }
     .fc-theme-standard td, .fc-theme-standard th { border-color: #00C85340; }
     .fc-button-primary { background: #00C853 !important; border: none !important; }
@@ -158,9 +149,9 @@ if "uploaded_files" not in st.session_state:
 if "appt_date_str" not in st.session_state:
     st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
 if "appt_start_time_str" not in st.session_state:
-    st.session_state.appt_start_time_str = "13:00"
+    st.session_state.appt_start_time_str = "13:00"  # 1:00 PM
 if "appt_end_time_str" not in st.session_state:
-    st.session_state.appt_end_time_str = "15:00"
+    st.session_state.appt_end_time_str = "15:00"    # 3:00 PM
 
 # ==================== SUCCESS HANDLING ====================
 if st.query_params.get("success") == "1":
@@ -173,11 +164,9 @@ if st.query_params.get("success") == "1":
         if booking:
             name, email, appt_date, appt_time, files = booking
             
-            # Mark as paid
             c.execute("UPDATE bookings SET deposit_paid = 1 WHERE stripe_session_id = ?", (session_id,))
             conn.commit()
             
-            # Send confirmation email
             if ICLOUD_ENABLED and email:
                 try:
                     msg = MIMEMultipart()
@@ -202,7 +191,6 @@ Covina, CA
                     """
                     msg.attach(MIMEText(body, 'plain'))
 
-                    # Attach reference images
                     if files:
                         for file_path in files.split(","):
                             if file_path and os.path.exists(file_path):
@@ -261,7 +249,7 @@ calendar_options = {
     },
     "slotMinTime": "12:00:00",
     "slotMaxTime": "20:00:00",
-    "hiddenDays": [0],  # Hide Sundays
+    "hiddenDays": [0],
     "height": "600px",
     "editable": False,
     "selectable": False,
@@ -313,27 +301,34 @@ with st.form("booking_form", clear_on_submit=True):
 
     with col_start:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
-        default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
+        # Default to 1:00 PM if not set
+        try:
+            default_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
+        except:
+            default_start = time(13, 0)
         start_time = st.time_input(
             "",
             value=default_start,
-            step=timedelta(minutes=30),
+            step=timedelta(minutes=30),  # 30-minute increments only
             key="appt_start_input"
         )
         st.session_state.appt_start_time_str = start_time.strftime("%H:%M")
 
     with col_end:
         st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>End Time</small>", unsafe_allow_html=True)
-        default_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
+        try:
+            default_end = datetime.strptime(st.session_state.appt_end_time_str, "%H:%M").time()
+        except:
+            default_end = time(15, 0)
         end_time = st.time_input(
             "",
             value=default_end,
-            step=timedelta(minutes=30),
+            step=timedelta(minutes=30),  # 30-minute increments only
             key="appt_end_input"
         )
         st.session_state.appt_end_time_str = end_time.strftime("%H:%M")
 
-    # Parse selected values
+    # Parse values for validation
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_start = datetime.strptime(st.session_state.appt_start_time_str, "%H:%M").time()
@@ -343,7 +338,7 @@ with st.form("booking_form", clear_on_submit=True):
         appt_start = time(13, 0)
         appt_end = time(15, 0)
 
-    # Validation feedback
+    # Real-time validation
     if appt_date.weekday() == 6:
         st.error("❌ Closed on Sundays — please choose another day")
     if appt_start.hour < 12 or appt_start.hour >= 20 or appt_end.hour <= 12 or appt_end.hour > 20:
@@ -360,7 +355,6 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
-        # Final validation
         if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
             st.error("Please fill all required fields")
             st.stop()
@@ -386,7 +380,6 @@ with st.form("booking_form", clear_on_submit=True):
         start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
         end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
-        # Conflict detection
         c.execute("""
             SELECT name FROM bookings 
             WHERE deposit_paid = 1 
@@ -398,20 +391,18 @@ with st.form("booking_form", clear_on_submit=True):
             st.error(f"❌ This time overlaps with an existing booking ({conflict[0]}). Please choose another slot.")
             st.stop()
 
-        # Save uploaded files securely
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
         saved_paths = []
         import secrets
         for f in st.session_state.uploaded_files:
-            ext = os.path.splitext(f.name)[1]
+            ext = os.path.splitext(f.name)[1].lower()
             safe_filename = f"{secrets.token_hex(8)}{ext}"
             path = f"{UPLOAD_DIR}/{bid}/{safe_filename}"
             with open(path, "wb") as out:
                 out.write(f.getbuffer())
             saved_paths.append(path)
 
-        # Create Stripe session
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
@@ -429,7 +420,6 @@ with st.form("booking_form", clear_on_submit=True):
             customer_email=email
         )
 
-        # Save tentative booking
         c.execute("""INSERT INTO bookings 
                      (id, name, age, phone, email, description, date, time, start_dt, end_dt, 
                       deposit_paid, stripe_session_id, files, created_at)
@@ -441,7 +431,7 @@ with st.form("booking_form", clear_on_submit=True):
         ))
         conn.commit()
 
-        # Reset form state
+        # Reset form
         st.session_state.uploaded_files = []
         st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
         st.session_state.appt_start_time_str = "13:00"
@@ -454,24 +444,16 @@ with st.form("booking_form", clear_on_submit=True):
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# WHITE FOOTER
+# FOOTER
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
 
-# RESTORE NATURAL SCROLL & BOTTOM GLOW
 st.markdown("""
 <style>
-    .stApp {
-        display: flex !important;
-        flex-direction: column !important;
-        min-height: 100vh !important;
-    }
-    .main {
-        flex: 1 !important;
-    }
-    footer, [data-testid="stFooter"] { display: none !important; }
+    .stApp { display: flex !important; flex-direction: column !important; min-height: 100vh !important; }
+    .main { flex: 1 !important; }
 </style>
 """, unsafe_allow_html=True)
