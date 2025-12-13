@@ -108,7 +108,7 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL EVERYTHING AT BOTTOM - ORIGINAL STYLE */
+    /* KILL EVERYTHING AT BOTTOM - ORIGINAL */
     footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
     .block-container { padding-bottom:0!important; margin-bottom:0!important; }
     section.main { margin-bottom:0!important; padding-bottom:0!important; }
@@ -167,12 +167,11 @@ conn.commit()
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
-# FIX: Set defaults only once on first load
 if "selected_date" not in st.session_state:
     now_local = datetime.now(STUDIO_TZ)
     next_day = now_local + timedelta(days=1)
     days_ahead = 1
-    while next_day.weekday() == 6:  # Skip Sundays
+    while next_day.weekday() == 6:
         days_ahead += 1
         next_day = now_local + timedelta(days=days_ahead)
     st.session_state.selected_date = next_day.date()
@@ -292,7 +291,9 @@ calendar_options = {
     "selectable": False,
 }
 
-calendar(events=events, options=calendar_options, key="availability_cal")
+# KEY FIX: Use a constant string key instead of variable to prevent remount/refresh loop
+calendar(events=events, options=calendar_options, key="availability_cal_fixed")
+
 st.markdown("<small style='color:#aaa;'>Red = booked • Green = your current selection • Studio open 12 PM – 8 PM (closed Sundays)</small>", unsafe_allow_html=True)
 
 # ==================== MAIN FORM ====================
