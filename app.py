@@ -291,7 +291,9 @@ with st.form("booking_form", clear_on_submit=True):
     st.markdown("### Select Date & Start/End Time")
 
     dc, tc1, tc2 = st.columns(3)
+    
     with dc:
+        st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Date</small>", unsafe_allow_html=True)
         components.html(f"""
         <input type="date" id="d" value="{st.session_state.appt_date_str}"
                min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
@@ -299,20 +301,22 @@ with st.form("booking_form", clear_on_submit=True):
                style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
         """, height=72)
+    
     with tc1:
+        st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>Start Time</small>", unsafe_allow_html=True)
         components.html(f"""
         <input type="time" id="start" value="{st.session_state.appt_start_time_str}" step="1800"
                style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        <small style="color:#00ff88;display:block;text-align:center;margin-top:4px;">Start Time</small>
-        """, height=90)
+        """, height=72)
+    
     with tc2:
+        st.markdown("<small style='color:#00ff88;display:block;text-align:center;margin-bottom:4px;font-weight:600;'>End Time</small>", unsafe_allow_html=True)
         components.html(f"""
         <input type="time" id="end" value="{st.session_state.appt_end_time_str}" step="1800"
                style="width:95%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        <small style="color:#00ff88;display:block;text-align:center;margin-top:4px;">End Time</small>
-        """, height=90)
+        """, height=72)
 
     components.html("""
     <script>
