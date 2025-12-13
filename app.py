@@ -28,7 +28,7 @@ st.markdown("""
         background: rgba(0, 0, 0, 0.86); z-index: -1;
     }
 
-    /* GLASS CARD WITH SEXY GREEN GLOW */
+    /* GLASS CARD WITH PULSING GREEN GLOW */
     .main {
         background: rgba(22, 22, 28, 0.6);
         backdrop-filter: blur(16px);
@@ -82,10 +82,9 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL ALL STREAMLIT GARBAGE */
+    /* KILL STREAMLIT FOOTER */
     footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
     .block-container { padding-bottom:0!important; margin-bottom:0!important; }
-    section.main { margin-bottom:0!important; padding-bottom:0!important; }
     .stApp { overflow:hidden; }
 </style>
 
@@ -107,10 +106,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/Los_Angeles")
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
+# FIXED: Added missing closing quote
 ICLOUD_ENABLED = "ICLOUD_EMAIL" in st.secrets and "ICLOUD_APP_PASSWORD" in st.secrets
 if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
-    ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD]
+    ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
 
 SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
@@ -131,7 +131,7 @@ if "appt_date_str" not in st.session_state:
 if "appt_time_str" not in st.session_state:
     st.session_state.appt_time_str = "13:00"
 
-# ==================== SUCCESS ====================
+# ==================== SUCCESS PAGE ====================
 if st.query_params.get("success") == "1":
     st.balloons()
     st.success("Payment Confirmed! Your slot is locked.")
@@ -306,7 +306,7 @@ with st.form("booking_form", clear_on_submit=True):
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# CLEAN WHITE FOOTER — VISIBLE & SEXY
+# WHITE FOOTER — CLEAN & VISIBLE
 st.markdown("""
 <div style="text-align:center; padding:40px 0 20px 0; color:white; font-size:16px; font-weight:500; letter-spacing:1px;">
     © 2025 Cashin Ink — Covina, CA
