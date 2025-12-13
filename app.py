@@ -479,52 +479,20 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# RESTORE NATURAL SCROLL & FULL MOBILE COMPATIBILITY — FINAL FIX
-st.markdown("""
-<style>
-    /* Core layout: flex column with full height */
+# RESTORE NATURAL SCROLL & BOTTOM GLOW
+st.markdown("""<style>
+    /* Allow natural scrolling and keep bottom glow visible */
     .stApp {
         display: flex !important;
         flex-direction: column !important;
         min-height: 100vh !important;
-        padding: 0 !important;
-        margin: 0 !important;
     }
-
-    /* Main glass card takes available space but allows scrolling */
     .main {
-        flex: 1 0 auto !important;  /* Critical: allows content to grow and scroll */
-        margin: 60px auto 40px auto !important;  /* Reduced bottom margin */
+        flex: 1 !important; /* This pushes footer down and enables scroll if needed */
     }
-
-    /* Hide only Streamlit's default footer */
+    /* Only hide Streamlit's default footer, nothing else */
     footer, [data-testid="stFooter"] { display: none !important; }
-
-    /* MOBILE FIXES */
-    @media (max-width: 768px) {
-        /* Add safe padding at bottom for address bar + ensure scrollability */
-        .stApp {
-            padding-bottom: 120px !important;   /* Space for mobile address bar */
-        }
-
-        /* Reduce top margin on mobile so logo + top of card is visible immediately */
-        .main {
-            margin-top: 20px !important;
-            margin-bottom: 40px !important;
-        }
-
-        /* Ensure the entire page can scroll properly */
-        html, body {
-            height: auto !important;
-            overflow-x: hidden !important;
-        }
-    }
-
-    /* DESKTOP: Keep original spacing */
-    @media (min-width: 769px) {
-        .main {
-            margin-top: 60px !important;
-        }
-    }
 </style>
 """, unsafe_allow_html=True)
+
+
