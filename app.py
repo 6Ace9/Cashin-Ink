@@ -1,4 +1,3 @@
-# app.py ← FINAL FIXED: Full background visible + Perfect fit + Fast loading + Original glow & function
 import streamlit as st
 import sqlite3
 import os
@@ -21,50 +20,45 @@ def img_b64(url):
     except:
         return None
 
-# Logo as base64 (small & instant)
+# Only load the logo as base64 (small file = safe)
 logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
 
-# Background direct URL
+# Direct background URL — NO base64 bloat, CDN cached, instant
 BG_URL = "https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/background.png"
 
-# ==================== CSS: FULL BACKGROUND VISIBLE & PERFECT FIT ====================
+# ==================== PERFECT CSS — OPTIMIZED FOR FULL-SCREEN FIT & PERFORMANCE ====================
 st.markdown(f"""
 <style>
-    /* Base app background */
+    /* Full fixed background using ::before (lightweight + smooth) */
     .stApp {{
         background: #000;
         min-height: 100vh;
         margin: 0;
         padding: 0;
         position: relative;
-        overflow-x: hidden;
     }}
-
-    /* Fixed full background — now centered properly with contain */
     .stApp::before {{
         content: '';
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
         background: linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.88)),
-                    url('{BG_URL}') center/contain no-repeat;
+                    url('{BG_URL}') center/cover no-repeat;
         background-attachment: fixed;
-        background-color: #000;
+        background-size: cover; /* Ensures it always covers the entire screen */
         z-index: -2;
         pointer-events: none;
     }}
-
-    /* Dark blur overlay */
     .stApp::after {{
         content: '';
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.35);
+        background: rgba(0,0,0,0.3);
         backdrop-filter: blur(8px);
         z-index: -1;
         pointer-events: none;
     }}
 
-    /* Main content glass card */
+    /* Main content card */
     .main {{
         background: rgba(0,0,0,0.6);
         padding: 35px;
@@ -102,7 +96,7 @@ st.markdown(f"""
     }}
     .centered-button {{ display: flex; justify-content: center; margin-top: 30px; }}
 
-    /* Glowing Logo — Perfect as before */
+    /* Glowing Logo — Isolated & Perfect */
     .logo-container {{
         text-align: center;
         padding: 40px 0 10px 0;
@@ -122,14 +116,14 @@ st.markdown(f"""
         to   {{ filter: drop-shadow(0 0 40px #00ff00) drop-shadow(0 0 80px #00C853); }}
     }}
 
-    /* Hide Streamlit extras */
+    /* Hide Streamlit junk */
     footer, .stAlert {{ visibility: hidden !important; }}
     .block-container {{ padding-top: 0 !important; }}
 </style>
 
 <!-- Glowing Logo -->
 <div class="logo-container">
-    <img src="data:image/png;base64,{logo_b64 or ''}" class="glowing-logo" alt="Cashin Ink Logo">
+    <img src="data:image/png;base64,{logo_b64}" class="glowing-logo" alt="Cashin Ink Logo">
 </div>
 
 <div style="text-align:center; margin-top:-15px; margin-bottom:20px;">
@@ -141,7 +135,7 @@ st.markdown(f"""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# ==================== DATABASE & STRIPE ====================
+# ==================== DATABASE & STRIPE SETUP ====================
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -164,6 +158,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
+# Session state defaults
 if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
 if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
 if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
@@ -216,6 +211,7 @@ with st.form("booking_form", clear_on_submit=False):
         </script>
         """, height=100)
 
+    # Sync custom pickers
     components.html("""
     <script>
         document.getElementById('datePicker')?.addEventListener('change', function() {
@@ -232,6 +228,7 @@ with st.form("booking_form", clear_on_submit=False):
         if val.get("date"): st.session_state.appt_date_str = val["date"]
         if val.get("time"): st.session_state.appt_time_str = val["time"]
 
+    # Validate date/time
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
@@ -313,10 +310,12 @@ with st.form("booking_form", clear_on_submit=False):
             except Exception as e:
                 st.error(f"Payment error: {str(e)}")
 
+# Success message
 if st.query_params.get("success") == "1":
     st.success("Payment Successful! Your slot is now LOCKED. We'll text/email you shortly!")
     st.balloons()
 
+# Admin view
 with st.expander("Upcoming Bookings (Admin View)"):
     bookings = c.execute("""
         SELECT name, date, time, phone, deposit_paid 
@@ -329,8 +328,10 @@ with st.expander("Upcoming Bookings (Admin View)"):
         st.markdown(f"**{row[0]}** — {row[1]} @ {row[2]} — {row[3]} — <span style='color:{color};font-weight:bold;'>{status}</span>", 
                     unsafe_allow_html=True)
 
+# Close main card
 st.markdown("</div>", unsafe_allow_html=True)
 
+# Footer
 st.markdown("""
 <div style="text-align:center;padding:50px 0 30px;color:#666;font-size:15px;">
     © 2025 Cashin Ink — Covina, CA • By Appointment Only • <span style="color:#00C853;">Powered by Ink & Code</span>
