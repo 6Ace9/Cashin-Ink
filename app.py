@@ -479,29 +479,51 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# RESTORE NATURAL SCROLL & BOTTOM GLOW + MOBILE FOOTER FIX
+# RESTORE NATURAL SCROLL & FULL MOBILE COMPATIBILITY — FINAL FIX
 st.markdown("""
 <style>
-    /* Allow natural scrolling and keep bottom glow visible */
+    /* Core layout: flex column with full height */
     .stApp {
         display: flex !important;
         flex-direction: column !important;
         min-height: 100vh !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
+
+    /* Main glass card takes available space but allows scrolling */
     .main {
-        flex: 1 !important;
+        flex: 1 0 auto !important;  /* Critical: allows content to grow and scroll */
+        margin: 60px auto 40px auto !important;  /* Reduced bottom margin */
     }
-    /* Only hide Streamlit's default footer */
+
+    /* Hide only Streamlit's default footer */
     footer, [data-testid="stFooter"] { display: none !important; }
 
-    /* MOBILE FIX: Extra padding at bottom to compensate for dynamic address bar */
+    /* MOBILE FIXES */
     @media (max-width: 768px) {
+        /* Add safe padding at bottom for address bar + ensure scrollability */
         .stApp {
-            padding-bottom: 100px !important;  /* Increase to 120px if still slightly clipped */
+            padding-bottom: 120px !important;   /* Space for mobile address bar */
         }
-        /* Optional: Slightly reduce top margin on mobile for better balance */
+
+        /* Reduce top margin on mobile so logo + top of card is visible immediately */
         .main {
-            margin-top: 40px !important;
+            margin-top: 20px !important;
+            margin-bottom: 40px !important;
+        }
+
+        /* Ensure the entire page can scroll properly */
+        html, body {
+            height: auto !important;
+            overflow-x: hidden !important;
+        }
+    }
+
+    /* DESKTOP: Keep original spacing */
+    @media (min-width: 769px) {
+        .main {
+            margin-top: 60px !important;
         }
     }
 </style>
