@@ -52,6 +52,11 @@ st.markdown("""
         flex: 1;
     }
 
+    @keyframes pulseGlow {
+        from { box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px rgba(0,200,83,0.4), 0 0 60px rgba(0,255,100,0.25), inset 0 0 20px rgba(0,255,100,0.1); }
+        to   { box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 40px rgba(0,200,83,0.6), 0 0 80px rgba(0,255,100,0.4), inset 0 0 30px rgba(0,255,100,0.15); }
+    }
+
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
         to   { filter: drop-shadow(0 0 45px #00C853); }
@@ -108,7 +113,7 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* KILL EVERYTHING AT BOTTOM - ORIGINAL */
+    /* KILL EVERYTHING AT BOTTOM */
     footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
     .block-container { padding-bottom:0!important; margin-bottom:0!important; }
     section.main { margin-bottom:0!important; padding-bottom:0!important; }
@@ -148,7 +153,6 @@ ICLOUD_ENABLED = "ICLOUD_EMAIL" in st.secrets and "ICLOUD_APP_PASSWORD" in st.se
 if ICLOUD_ENABLED:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
     ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
-    STUDIO_EMAIL = ICLOUD_EMAIL
 
 BASE_URL = "https://cashin-ink.streamlit.app"
 SUCCESS_URL = f"{BASE_URL}/?success=1&session_id={{CHECKOUT_SESSION_ID}}"
@@ -167,15 +171,13 @@ conn.commit()
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
+# Default selection: tomorrow at 1:00 PM – 3:00 PM
 if "selected_date" not in st.session_state:
-    now_local = datetime.now(STUDIO_TZ)
-    next_day = now_local + timedelta(days=1)
-    days_ahead = 1
-    while next_day.weekday() == 6:
-        days_ahead += 1
-        next_day = now_local + timedelta(days=days_ahead)
-    st.session_state.selected_date = next_day.date()
+    tomorrow = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
+    st.session_state.selected_date = tomorrow
+if "start_time" not in st.session_state:
     st.session_state.start_time = time(13, 0)
+if "end_time" not in st.session_state:
     st.session_state.end_time = time(15, 0)
 
 # ==================== SUCCESS HANDLING ====================
@@ -216,6 +218,19 @@ Covina, CA
                     """
                     msg.attach(MIMEText(body, 'plain'))
 
+                    if files:
+                        for file_path in files.split(","):
+                            if file_path and os.path.exists(file_path):
+                                with open(file_path, "rb") as attachment:
+                                    part = MIMEBase('application', 'octet-stream')
+                                    part.set_payload(attachment.read())
+                                    encoders.encode_base64(part)
+                                    part.add_header(
+                                        'Content-Disposition',
+                                        f'attachment; filename={os.path.basename(file_path)}'
+                                    )
+                                    msg.attach(part)
+
                     server = smtplib.SMTP('smtp.mail.me.com', 587)
                     server.starttls()
                     server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
@@ -254,7 +269,7 @@ for name, start_utc, end_utc in booked:
         "classNames": ["booked"]
     })
 
-# Add tentative selection
+# Add tentative selection as green highlighted block (only if valid)
 selected_start_local = STUDIO_TZ.localize(datetime.combine(st.session_state.selected_date, st.session_state.start_time))
 selected_end_local = STUDIO_TZ.localize(datetime.combine(st.session_state.selected_date, st.session_state.end_time))
 
@@ -291,9 +306,7 @@ calendar_options = {
     "selectable": False,
 }
 
-# KEY FIX: Use a constant string key instead of variable to prevent remount/refresh loop
-calendar(events=events, options=calendar_options, key="availability_cal_fixed")
-
+calendar(events=events, options=calendar_options, key="availability_cal")
 st.markdown("<small style='color:#aaa;'>Red = booked • Green = your current selection • Studio open 12 PM – 8 PM (closed Sundays)</small>", unsafe_allow_html=True)
 
 # ==================== MAIN FORM ====================
@@ -334,7 +347,9 @@ with st.form("booking_form", clear_on_submit=True):
         )
         st.session_state.selected_date = selected_date
 
-    time_options = [time(h, m) for h in range(12, 20) for m in (0, 30)] + [time(20, 0)]
+    # Time options: every 30 minutes from 12:00 to 19:30
+    time_options = [time(h, m) for h in range(12, 20) for m in (0, 30)]
+    time_display = [t.strftime("%-I:%M %p") for t in time_options]
 
     with col_start:
         start_idx = time_options.index(st.session_state.start_time) if st.session_state.start_time in time_options else 2
@@ -379,6 +394,7 @@ with st.form("booking_form", clear_on_submit=True):
         submit = st.form_submit_button("BOOK APPOINTMENT", use_container_width=True)
 
     if submit:
+        # Final validation
         if not all([name.strip(), phone.strip(), email.strip(), description.strip()]):
             st.error("Please fill all required fields")
             st.stop()
@@ -404,6 +420,7 @@ with st.form("booking_form", clear_on_submit=True):
         start_utc = start_dt_local.astimezone(pytz.UTC).isoformat()
         end_utc = end_dt_local.astimezone(pytz.UTC).isoformat()
 
+        # Conflict check
         c.execute("""
             SELECT name FROM bookings 
             WHERE deposit_paid = 1 
@@ -415,6 +432,7 @@ with st.form("booking_form", clear_on_submit=True):
             st.error(f"❌ This time overlaps with an existing booking ({conflict[0]}). Please choose another slot.")
             st.stop()
 
+        # Save files
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
         saved_paths = []
@@ -425,54 +443,7 @@ with st.form("booking_form", clear_on_submit=True):
                 out.write(f.getbuffer())
             saved_paths.append(path)
 
-        if ICLOUD_ENABLED:
-            try:
-                msg = MIMEMultipart()
-                msg['From'] = ICLOUD_EMAIL
-                msg['To'] = STUDIO_EMAIL
-                msg['Subject'] = f"New Tattoo Booking Request – {name}"
-
-                display_time = f"{start_choice.strftime('%-I:%M %p')} – {end_choice.strftime('%-I:%M %p')}"
-                body = f"""
-New booking request received!
-
-Client: {name}
-Age: {age}
-Phone: {phone}
-Email: {email}
-
-Appointment: {selected_date.strftime('%A, %B %d, %Y')} | {display_time}
-
-Description:
-{description}
-
-Reference images attached (if any).
-
-Customer is now being redirected to pay the $150 deposit to confirm.
-                """
-                msg.attach(MIMEText(body, 'plain'))
-
-                if saved_paths:
-                    for file_path in saved_paths:
-                        if os.path.exists(file_path):
-                            with open(file_path, "rb") as attachment:
-                                part = MIMEBase('application', 'octet-stream')
-                                part.set_payload(attachment.read())
-                                encoders.encode_base64(part)
-                                part.add_header(
-                                    'Content-Disposition',
-                                    f'attachment; filename={os.path.basename(file_path)}'
-                                )
-                                msg.attach(part)
-
-                server = smtplib.SMTP('smtp.mail.me.com', 587)
-                server.starttls()
-                server.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
-                server.sendmail(ICLOUD_EMAIL, STUDIO_EMAIL, msg.as_string())
-                server.quit()
-            except Exception as e:
-                st.warning("Booking saved, but studio notification email failed. Please check manually.")
-
+        # Create Stripe session
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
@@ -490,6 +461,7 @@ Customer is now being redirected to pay the $150 deposit to confirm.
             customer_email=email
         )
 
+        # Save tentative booking
         display_time = f"{start_choice.strftime('%-I:%M %p')} – {end_choice.strftime('%-I:%M %p')}"
         c.execute("""INSERT INTO bookings 
                      (id, name, age, phone, email, description, date, time, start_dt, end_dt, 
@@ -511,14 +483,14 @@ Customer is now being redirected to pay the $150 deposit to confirm.
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# WHITE FOOTER - ORIGINAL
+# WHITE FOOTER
 st.markdown("""
 <div style="text-align:center; color:white; font-size:16px; font-weight:500; letter-spacing:1px; padding:30px 0 0 0; margin:0;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
 
-# ORIGINAL NATURAL SCROLL FIX
+# RESTORE NATURAL SCROLL
 st.markdown("""
 <style>
     .stApp { display: flex !important; flex-direction: column !important; min-height: 100vh !important; }
