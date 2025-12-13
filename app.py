@@ -28,7 +28,7 @@ st.markdown("""
         background: rgba(0, 0, 0, 0.86); z-index: -1;
     }
     .main {
-        background: rgba(22, 22, 28, 0.6) !important;
+        background: rgba(22, 22, 28, 0.6);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border-radius: 26px;
@@ -37,10 +37,11 @@ st.markdown("""
         margin: 20px auto;
         max-width: 960px;
         padding: 50px;
+        margin-bottom: 10px;
     }
     @keyframes glow {
         from { filter: drop-shadow(0 0 20px #00C853); }
-        to   { filter: drop-shadow(0  0 45px #00C853); }
+        to   { filter: drop-shadow(0 0 0 45px #00C853); }
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
 
@@ -69,10 +70,11 @@ st.markdown("""
 
     h1,h2,h3,h4 { color:#00ff88!important; text-align:center; font-weight:500; }
 
-    /* ONLY REMOVE STREAMLIT'S FLOATING BAR — KEEP YOUR FOOTER */
-    footer, [data-testid="stFooter"] { visibility: hidden !important; }
-    .css-1d391kg, .css-1v0mbdj { display: none !important; }
-    .block-container { padding-bottom: 0 !important; margin-bottom: 0 !important; }
+    /* KILL ALL STREAMLIT FOOTER & EXTRA SPACE */
+    footer, [data-testid="stFooter"], .css-1d391kg, .css-1v0mbdj { display:none!important; }
+    .block-container { padding-bottom:0!important; margin-bottom:0!important; }
+    section.main { margin-bottom:0!important; padding-bottom:0!important; }
+    .stApp { overflow:hidden; }
 </style>
 
 <div style="text-align:center;padding:60px 0 30px 0;">
@@ -86,7 +88,7 @@ st.markdown("""
 <div class="main">
 """, unsafe_allow_html=True)
 
-# ==================== SETUP ====================
+# ==================== CONFIG ====================
 DB_PATH = "bookings.db"
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -110,13 +112,14 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
 if "appt_date_str" not in st.session_state:
     st.session_state.appt_date_str = (datetime.now(STUDIO_TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
 if "appt_time_str" not in st.session_state:
     st.session_state.appt_time_str = "13:00"
 
-# SUCCESS PAGE
+# ==================== SUCCESS PAGE ====================
 if st.query_params.get("success") == "1":
     st.balloons()
     st.success("Payment Confirmed! Your slot is locked.")
@@ -151,7 +154,7 @@ END:VCALENDAR""".format(
                 msg = MIMEMultipart()
                 msg['From'] = msg['To'] = ICLOUD_EMAIL
                 msg['Subject'] = f"New Booking: {name}"
-                msg.attach(MIMEText(f"New booking from {name}", 'plain'))
+                msg.attach(MIMEText(f"New booking from {name} on {date_str} {time_str}", 'plain'))
                 part = MIMEBase('text', 'calendar')
                 part.set_payload(ics_content)
                 encoders.encode_base64(part)
@@ -162,12 +165,13 @@ END:VCALENDAR""".format(
                 s.login(ICLOUD_EMAIL, ICLOUD_APP_PASSWORD)
                 s.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 s.quit()
-            except: pass
+            except:
+                pass
             c.execute("UPDATE bookings SET deposit_paid=1 WHERE id=?", (bid,))
             conn.commit()
     st.stop()
 
-# MAIN FORM
+# ==================== MAIN FORM ====================
 st.markdown("---")
 st.header("Book Your Session — $150 Deposit")
 st.info("Non-refundable • Locks your slot")
@@ -189,22 +193,22 @@ with st.form("booking_form", clear_on_submit=True):
 
     st.markdown("### Select Date & Time")
 
-    # FINAL PERFECT PICKERS — NEVER CUT OFF
+    # PERFECT, SMALL, NEVER CUT OFF PICKERS
     dc, tc = st.columns(2)
     with dc:
         components.html(f"""
         <input type="date" id="d" value="{st.session_state.appt_date_str}"
                min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
                max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:100%; height:50px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+               style="width:100%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=58)
+        """, height=56)
     with tc:
         components.html(f"""
         <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
-               style="width:100%; height:50px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+               style="width:100%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
-        """, height=58)
+        """, height=56)
 
     components.html("""
     <script>
@@ -225,8 +229,10 @@ with st.form("booking_form", clear_on_submit=True):
         appt_date = (datetime.now(STUDIO_TZ) + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
-    if appt_date.weekday() == 6: st.error("Closed on Sundays")
-    if appt_time.hour < 12 or appt_time.hour > 20: st.error("Open 12 PM – 8 PM only")
+    if appt_date.weekday() == 6:
+        st.error("Closed on Sundays")
+    if appt_time.hour < 12 or appt_time.hour > 20:
+        st.error("Open 12 PM – 8 PM only")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
@@ -253,12 +259,20 @@ with st.form("booking_form", clear_on_submit=True):
         paths = []
         for f in st.session_state.uploaded_files:
             path = f"{UPLOAD_DIR}/{bid}/{f.name}"
-            with open(path, "wb") as out: out.write(f.getbuffer())
+            with open(path, "wb") as out:
+                out.write(f.getbuffer())
             paths.append(path)
 
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"Deposit – {name}"},
+                    "unit_amount": 15000
+                },
+                "quantity": 1
+            }],
             mode="payment",
             success_url=SUCCESS_URL,
             cancel_url=CANCEL_URL,
@@ -282,8 +296,9 @@ with st.form("booking_form", clear_on_submit=True):
 # CLOSE CARD
 st.markdown("</div>", unsafe_allow_html=True)
 
-# YOUR ORIGINAL FOOTER — BACK AND BEAUTIFUL
+# FINAL WHITE FOOTER — VISIBLE, NO SPACE BELOW
 st.markdown("""
-<div style="text-align:center; padding:70px 0 30px; color:#444; font-size:15px;">
-    © 2025 Cashin Ink — Covina, CA</div>
+<div style="text-align:center; padding:40px 0 20px 0; color:white; font-size:16px; font-weight:500; letter-spacing:1px;">
+    © 2025 Cashin Ink — Covina, CA
+</div>
 """, unsafe_allow_html=True)
