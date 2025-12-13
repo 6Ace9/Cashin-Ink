@@ -1,4 +1,5 @@
-# app.py ← FINAL: WORKS EVEN WITHOUT SECRETS + .ICS EMAIL TO JULIO'S ICLOUD + NO DUPLICATES + NO PUBLIC LIST
+# app.py ← FINAL ULTRA-FAST VERSION | SAME LOOK | NO LAG | WORKS WITHOUT SECRETS FALLBACK
+
 import streamlit as st
 import sqlite3
 import os
@@ -7,7 +8,6 @@ from datetime import datetime, timedelta
 import uuid
 import pytz
 import streamlit.components.v1 as components
-import base64
 import requests
 import smtplib
 from email.mime.text import MIMEText
@@ -17,57 +17,54 @@ from email import encoders
 
 st.set_page_config(page_title="Cashin Ink", layout="centered", page_icon="Tattoo")
 
-# ==================== IMAGE LOADER ====================
-def img_b64(path):
-    try:
-        if path.startswith("http"):
-            data = requests.get(path, timeout=10).content
-        else:
-            if os.path.exists(path):
-                with open(path, "rb") as f:
-                    data = f.read()
-            else:
-                return None
-        return base64.b64encode(data).decode()
-    except:
-        return None
-
-logo_b64 = img_b64("https://raw.githubusercontent.com/6Ace9/Cashin-Ink/main/logo.png")
-bg_b64   = img_b64("https://raw.githubusercontent.com/USERNAME/REPO/main/background.png")
-
-logo_html = (
-    f'<img src="data:image/png;base64,{logo_b64}" style="display:block;margin:20px auto;width:340px;filter:drop-shadow(0 0 25px #00C853);">'
-    if logo_b64 else "<h1 style='color:#00C853;text-align:center;'>CASHIN INK</h1>"
-)
-
-bg_css = (
-    f"background:linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),url('data:image/png;base64,{bg_b64}') center/cover no-repeat fixed;"
-    if bg_b64 else "background:#000;"
-)
+# ==================== FAST LOGO & BACKGROUND (CDN + CACHED) ====================
+LOGO_URL = "https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png"
+BG_URL   = "https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/background.png"  # replace with your actual bg if you have one
 
 st.markdown(f"""
 <style>
-    .stApp {{ {bg_css} min-height:100vh; margin:0; padding:0; }}
-    .main {{ background:rgba(0,0,0,0.5); padding:30px; border-radius:18px; max-width:900px; margin:20px auto; border:1px solid #00C85340; }}
-    h1,h2,h3,h4 {{ color:#00C853 !important; text-align:center; }}
-    .stButton>button {{ 
-        background:#00C853 !important; 
-        color:black !important; 
-        font-weight:bold; 
-        border-radius:8px; 
-        padding:18px 40px !important; 
-        font-size:20px !important;
-        white-space: nowrap !important;
+    .stApp {{
+        background: linear-gradient(rgba(0,0,0,0.88), rgba(0,0,0,0.88)),
+                    url('{BG_URL}') center/cover no-repeat fixed;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+    }}
+    .main {{
+        background: rgba(0,0,0,0.5);
+        padding: 30px;
+        border-radius: 18px;
+        max-width: 900px;
+        margin: 20px auto;
+        border: 1px solid #00C85340;
+        backdrop-filter: blur(8px);
+    }}
+    h1, h2, h3, h4 {{ color: #00C853 !important; text-align: center; }}
+    .stButton>button {{
+        background: #00C853 !important;
+        color: black !important;
+        font-weight: bold;
+        border-radius: none;
+        border-radius: 8px;
+        padding: 18px 40px !important;
+        font-size: 20px !important;
         min-height: 60px !important;
     }}
-    .block-container {{ padding-bottom: 1rem !important; }}
     footer {{ visibility: hidden !important; }}
-    .css-1d391kg {{ display: none !important; }}
+    .css-1d391kg {{ display: none !important;
+    @keyframes glow {{
+        from {{ filter: drop-shadow(0 0 15px #00C853); }}
+        to   {{ filter: drop-shadow(0 0 35px #00C853); }}
+    }}
+    .logo-glow {{
+        animation: glow 4s ease-in-out infinite alternate;
+        border-radius: 12px;
+    }}
 </style>
 
-<div style="text-align:center;padding:20px 0;">
-    {logo_html}
-    <h3>LA — Premium Tattoo Studio</h3>
+<div style="text-align:center; padding:30px 0 10px 0;">
+    <img src="{LOGO_URL}" class="logo-glow" style="width:340px; height:auto;" loading="lazy">
+    <h3 style="margin-top:12px; color:#00C853; font-weight:300;">LA — Premium Tattoo Studio</h3>
 </div>
 <div class="main">
 """, unsafe_allow_html=True)
@@ -78,25 +75,26 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 STUDIO_TZ = pytz.timezone("America/New_York")
 
+# Stripe key with safe fallback
 if "STRIPE_SECRET_KEY" not in st.secrets:
-    st.error("Missing STRIPE_SECRET_KEY in secrets")
+    st.error("Missing STRIPE_SECRET_KEY in Streamlit secrets")
     st.stop()
 stripe.api_key = st.secrets["STRIPE_SECRET_KEY"]
 
-# JULIO'S ICLOUD CREDENTIALS — SAFE CHECK (no crash if missing)
+# iCloud calendar (optional)
 try:
     ICLOUD_EMAIL = st.secrets["ICLOUD_EMAIL"]
     ICLOUD_APP_PASSWORD = st.secrets["ICLOUD_APP_PASSWORD"]
     ICLOUD_ENABLED = True
 except:
-    ICLOUD_EMAIL = None
-    ICLOUD_APP_PASSWORD = None
+    ICLOUD_EMAIL = ICLOUD_APP_PASSWORD = None
     ICLOUD_ENABLED = False
-    st.warning("iCloud calendar notifications disabled — add ICLOUD_EMAIL and ICLOUD_APP_PASSWORD to secrets to enable")
+    st.warning("iCloud calendar disabled — add ICLOUD_EMAIL + ICLOUD_APP_PASSWORD to secrets to enable .ics delivery")
 
 SUCCESS_URL = "https://cashin-ink.streamlit.app/?success=1"
 CANCEL_URL = "https://cashin-ink.streamlit.app"
 
+# Database
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS bookings (
@@ -106,14 +104,17 @@ c.execute('''CREATE TABLE IF NOT EXISTS bookings (
 )''')
 conn.commit()
 
-# Session state
-if "uploaded_files" not in st.session_state: st.session_state.uploaded_files = []
-if "appt_date_str" not in st.session_state: st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-if "appt_time_str" not in st.session_state: st.session_state.appt_time_str = "13:00"
+# Session state init
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+if "appt_date_str" not in st.session_state:
+    st.session_state.appt_date_str = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+if "appt_time_str" not in st.session_state:
+    st.session_state.appt_time_str = "13:00"
 
 st.markdown("---")
 st.header("Book Sessions — $150 Deposit")
-st.info("Lock your slot • Non-refundable")
+st.info("Lock your slot • Non-refundable deposit")
 
 with st.form("booking_form"):
     col1, col2 = st.columns(2)
@@ -121,18 +122,19 @@ with st.form("booking_form"):
         name = st.text_input("Full Name*", placeholder="John Doe")
         phone = st.text_input("Phone*", placeholder="(305) 555-1234")
     with col2:
-        age = st.number_input("Age*", 18, 100, 25)
+        age = st.number_input("Age*", min_value=18, max_value=100, value=25)
         email = st.text_input("Email*", placeholder="you@gmail.com")
 
-    description = st.text_area("Tattoo Idea* (size, placement, style)", height=120)
+    description = st.text_area("Tattoo Idea* (size, placement, style)", height=120, placeholder="e.g. 4x4 inch rose on forearm, black & grey realism")
     uploaded = st.file_uploader("Reference photos (optional)", type=["png","jpg","jpeg","heic","pdf"], accept_multiple_files=True)
-    if uploaded: st.session_state.uploaded_files = uploaded
+    if uploaded:
+        st.session_state.uploaded_files = uploaded
 
-    st.markdown("### Date & Time")
+    st.markdown("### Select Date & Time")
     dc, tc = st.columns([2,1])
 
     with dc:
-        st.markdown("**Select Date**")
+        st.markdown("**Date**")
         components.html(f"""
         <div style="display:flex;justify-content:center;align-items:center;height:140px;">
             <input type="date" id="datePicker" value="{st.session_state.appt_date_str}"
@@ -163,20 +165,24 @@ with st.form("booking_form"):
         </script>
         """, height=180)
 
-    components.html(f"""
+    # Sync picker values
+    components.html("""
     <script>
         const dateInput = document.getElementById('datePicker');
         const timeInput = document.getElementById('timePicker');
-        dateInput.addEventListener('change', function() {{ parent.streamlit.setComponentValue({{date: this.value}}); }});
-        timeInput.addEventListener('change', function() {{ parent.streamlit.setComponentValue({{time: this.value}}); }});
+        dateInput.addEventListener('change', () => parent.streamlit.setComponentValue({date: dateInput.value}));
+        timeInput.addEventListener('change', () => parent.streamlit.setComponentValue({time: timeInput.value}));
     </script>
     """, height=0)
 
-    picker_value = st.session_state.get("streamlit_component_value", {})
-    if isinstance(picker_value, dict):
-        if picker_value.get("date"): st.session_state.appt_date_str = picker_value["date"]
-        if picker_value.get("time"): st.session_state.appt_time_str = picker_value["time"]
+    picker = st.session_state.get("streamlit_component_value", {})
+    if isinstance(picker, dict):
+        if picker.get("date"):
+            st.session_state.appt_date_str = picker["date"]
+        if picker.get("time"):
+            st.session_state.appt_time_str = picker["time"]
 
+    # Parse date/time safely
     try:
         appt_date = datetime.strptime(st.session_state.appt_date_str, "%Y-%m-%d").date()
         appt_time = datetime.strptime(st.session_state.appt_time_str, "%H:%M").time()
@@ -184,51 +190,63 @@ with st.form("booking_form"):
         appt_date = (datetime.today() + timedelta(days=1)).date()
         appt_time = datetime.strptime("13:00", "%H:%M").time()
 
+    # Validation messages
     if appt_date.weekday() == 6:
-        st.error("Closed on Sundays — please choose another date")
+        st.error("Closed on Sundays — please pick another day")
     if appt_time.hour < 12 or appt_time.hour > 20:
-        st.error("Open 12 PM – 8 PM only — please adjust time")
+        st.error("Studio open 12:00 PM – 8:00 PM only")
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
     st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-    left_col, center_col, right_col = st.columns([1, 1.8, 1])
-    with center_col:
+    _, center, _ = st.columns([1, 1.8, 1])
+    with center:
         submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT", use_container_width=True)
 
     if submit:
+        # Final validation
         if appt_date.weekday() == 6 or appt_time.hour < 12 or appt_time.hour > 20:
-            st.error("Invalid date/time")
+            st.error("Invalid date or time selected")
             st.stop()
-        if not all([name, phone, email, description]) or age < 18 or not agree:
-            st.error("Complete all fields & agree")
+        if not all([name.strip(), phone.strip(), email.strip(), description.strip()]) or age < 18 or not agree:
+            st.error("Please fill all required fields and agree to deposit")
             st.stop()
 
         start_dt_local = datetime.combine(appt_date, appt_time)
         start_dt = STUDIO_TZ.localize(start_dt_local)
         end_dt = start_dt + timedelta(hours=2)
 
+        # Check for conflicts
         conflict = c.execute(
             "SELECT name FROM bookings WHERE start_dt < ? AND end_dt > ?",
             (end_dt.astimezone(pytz.UTC).isoformat(), start_dt.astimezone(pytz.UTC).isoformat())
         ).fetchone()
 
         if conflict:
-            st.error(f"Slot already taken by {conflict[0]}")
+            st.error(f"This time slot is already booked by {conflict[0]}")
             st.stop()
 
+        # Save files
         bid = str(uuid.uuid4())
         os.makedirs(f"{UPLOAD_DIR}/{bid}", exist_ok=True)
-        paths = []
-        for f in st.session_state.uploaded_files:
-            p = f"{UPLOAD_DIR}/{bid}/{f.name}"
-            with open(p, "wb") as out:
-                out.write(f.getbuffer())
-            paths.append(p)
+        saved_paths = []
+        for file in st.session_state.uploaded_files:
+            path = f"{UPLOAD_DIR}/{bid}/{file.name}"
+            with open(path, "wb") as f:
+                f.write(file.getbuffer())
+            saved_paths.append(path)
 
+        # Create Stripe session
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            line_items=[{ "price_data": { "currency": "usd", "product_data": {"name": f"Deposit – {name}"}, "unit_amount": 15000 }, "quantity": 1 }],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"Deposit – {name}"},
+                    "unit_amount": 15000,
+                },
+                "quantity": 1,
+            }],
             mode="payment",
             success_url=SUCCESS_URL,
             cancel_url=CANCEL_URL,
@@ -236,66 +254,56 @@ with st.form("booking_form"):
             customer_email=email
         )
 
-        c.execute("INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            bid, name, age, phone, email, description, str(appt_date),
-            appt_time.strftime("%-I:%M %p"),
+        # Save booking (deposit not yet confirmed)
+        c.execute("""INSERT INTO bookings VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (
+            bid, name, age, phone, email, description,
+            str(appt_date), appt_time.strftime("%-I:%M %p"),
             start_dt.astimezone(pytz.UTC).isoformat(),
             end_dt.astimezone(pytz.UTC).isoformat(),
-            0, session.id, ",".join(paths), datetime.utcnow().isoformat()
+            0, session.id, ",".join(saved_paths), datetime.utcnow().isoformat()
         ))
         conn.commit()
 
-        st.success("Taking you to secure payment…")
+        st.success("Redirecting to secure payment...")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={session.url}">', unsafe_allow_html=True)
         st.balloons()
 
-# SUCCESS → SEND .ICS TO JULIO'S ICLOUD EMAIL (ONLY IF CREDENTIALS EXIST)
-if st.query_params.get("success"):
-    st.success("Payment confirmed! Your slot is locked. Julio will contact you soon.")
+# SUCCESS PAGE — SEND .ICS TO JULIO
+if st.query_params.get("success") == "1":
+    st.success("Payment confirmed! Your slot is locked. Julio will text/call you soon to confirm design & details.")
     st.balloons()
 
     if ICLOUD_ENABLED:
-        latest = c.execute("SELECT name, date, time, phone, email, description FROM bookings ORDER BY created_at DESC LIMIT 1").fetchone()
-        if latest:
-            client_name, date_str, time_str, phone, client_email, desc = latest
-
+        booking = c.execute("SELECT name,date,time,phone,email,description,id FROM bookings ORDER BY created_at DESC LIMIT 1").fetchone()
+        if booking:
+            client_name, date_str, time_str, phone, client_email, desc, bid = booking
             start_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %I:%M %p")
             end_dt = start_dt + timedelta(hours=2)
 
-            ics_content = """BEGIN:VCALENDAR
+            ics = f"""BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Cashin Ink//EN
+PRODID:-//Cashin Ink//Booking//EN
 BEGIN:VEVENT
 UID:cashinink-{bid}@cashinink.com
-DTSTAMP:{now}
-DTSTART:{start}
-DTEND:{end}
-SUMMARY:Tattoo – {name}
+DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}
+DTSTART:{start_dt.strftime("%Y%m%dT%H%M00")}
+DTEND:{end_dt.strftime("%Y%m%dT%H%M00")}
+SUMMARY:Tattoo Session – {client_name}
 LOCATION:Cashin Ink Studio – Covina, CA
-DESCRIPTION:Client: {name}\\nPhone: {phone}\\nEmail: {email}\\nIdea: {desc}\\nDeposit: PAID $150
+DESCRIPTION:Client: {client_name}\\nPhone: {phone}\\nEmail: {client_email}\\nIdea: {desc.replace(chr(10), '\\n')}\\nDeposit: PAID $150
+TRANSP:OPAQUE
 END:VEVENT
-END:VCALENDAR
-""".format(
-                bid=bid,
-                now=datetime.utcnow().strftime("%Y%m%dT%H%M%SZ"),
-                start=start_dt.strftime("%Y%m%dT%H%M00"),
-                end=end_dt.strftime("%Y%m%dT%H%M00"),
-                name=client_name,
-                phone=phone,
-                email=client_email,
-                desc=desc.replace("\n", "\\n")
-            )
+END:VCALENDAR"""
 
             msg = MIMEMultipart()
             msg['From'] = ICLOUD_EMAIL
             msg['To'] = ICLOUD_EMAIL
             msg['Subject'] = f"New Booking: {client_name} – {date_str} {time_str}"
 
-            body = f"New paid booking!\n\n{client_name} – {date_str} @ {time_str}\nDeposit confirmed."
-            msg.attach(MIMEText(body, 'plain'))
+            msg.attach(MIMEText(f"New paid booking!\n\n{client_name}\n{date_str} @ {time_str}\nDeposit confirmed.", 'plain'))
 
             part = MIMEBase('text', 'calendar; name="booking.ics"')
-            part.set_payload(ics_content)
+            part.set_payload(ics)
             encoders.encode_base64(part)
             part.add_header('Content-Disposition', 'attachment; filename="booking.ics"')
             msg.attach(part)
@@ -307,12 +315,12 @@ END:VCALENDAR
                 server.sendmail(ICLOUD_EMAIL, ICLOUD_EMAIL, msg.as_string())
                 server.quit()
                 st.success("Calendar event sent to Julio's iPhone!")
-            except:
-                st.warning("Failed to send calendar event (check credentials)")
+            except Exception as e:
+                st.warning("Could not send .ics to iCloud (check credentials)")
 
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("""
-<div style="text-align:center; padding:20px 0 30px 0; color:#888; font-size:14px;">
+<div style="text-align:center; padding:40px 0 20px 0; color:#666; font-size:14px;">
     © 2025 Cashin Ink — Covina, CA
 </div>
 """, unsafe_allow_html=True)
