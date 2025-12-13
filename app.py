@@ -1,4 +1,4 @@
-# app.py ← FINAL: PAY DEPOSIT BUTTON PERFECTLY CENTERED & WIDE ON MOBILE + DESKTOP
+# app.py ← FINAL: PAY DEPOSIT BUTTON TEXT ON SINGLE LINE + PERFECTLY CENTERED & WIDE
 import streamlit as st
 import sqlite3
 import os
@@ -54,6 +54,8 @@ st.markdown(f"""
         padding:18px 40px !important; 
         font-size:20px !important;
         height: auto !important;
+        white-space: nowrap !important;   /* Keeps text on one line */
+        min-height: 60px !important;      /* Ensures enough height for single-line text */
     }}
     /* Remove extra scroll space */
     .block-container {{ padding-bottom: 1rem !important; }}
@@ -183,11 +185,14 @@ with st.form("booking_form"):
 
     agree = st.checkbox("I agree to the **$150 non-refundable deposit**")
 
-    # PERFECT CENTERED WIDE BUTTON USING COLUMNS — WORKS 100% ON MOBILE & DESKTOP
+    # FINAL: Wide, centered button with text on ONE LINE
     st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-    left_col, center_col, right_col = st.columns([1, 1, 1])
+    left_col, center_col, right_col = st.columns([1, 1.8, 1])  # Wider middle column for spacious button
     with center_col:
-        submit = st.form_submit_button("PAY DEPOSIT  =>  SCHEDULE APPOINTMENT", use_container_width=True)
+        submit = st.form_submit_button(
+            "PAY DEPOSIT  =>  SCHEDULE APPOINTMENT",
+            use_container_width=True
+        )
 
     if submit:
         if appt_date.weekday() == 6:
