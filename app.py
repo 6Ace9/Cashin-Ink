@@ -190,7 +190,7 @@ with st.form("booking_form"):
     left_col, center_col, right_col = st.columns([1, 1.8, 1])  # Wider middle column for spacious button
     with center_col:
         submit = st.form_submit_button(
-            "PAY DEPOSIT  =>  SCHEDULE APPOINTMENT",
+            "SCHEDULE APPOINTMENT",
             use_container_width=True
         )
 
