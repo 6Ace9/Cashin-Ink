@@ -57,20 +57,8 @@ st.markdown("""
     }
 
     @keyframes glow {
-        from { 
-            text-shadow: 
-                0 0 10px #00C853,
-                0 0 20px #00C853,
-                0 0 40px #00ff6c,
-                0 0 60px #00ff6c;
-        }
-        to   { 
-            text-shadow: 
-                0 0 20px #00C853,
-                0 0 30px #00C853,
-                0 0 50px #00ff6c,
-                0 0 80px #00ff6c;
-        }
+        from { filter: drop-shadow(0 0 20px #00C853); }
+        to   { filter: drop-shadow(0 0 45px #00C853); }
     }
     .logo-glow { animation: glow 4s ease-in-out infinite alternate; border-radius: 20px; }
 
