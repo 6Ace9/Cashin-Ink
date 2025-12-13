@@ -166,13 +166,13 @@ with st.form("booking_form", clear_on_submit=True):
         <input type="date" id="d" value="{st.session_state.appt_date_str}"
                min="{ (datetime.now(STUDIO_TZ)+timedelta(days=1)).strftime('%Y-%m-%d') }"
                max="{ (datetime.now(STUDIO_TZ)+timedelta(days=90)).strftime('%Y-%m-%d') }"
-               style="width:80%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+               style="width:90%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
         """, height=72)
     with tc:
         components.html(f"""
         <input type="time" id="t" value="{st.session_state.appt_time_str}" step="3600"
-               style="width:80%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
+               style="width:90%; height:48px; padding:10px; font-size:16px; background:#1e1e1e; color:white;
                       border:2px solid #00C853; border-radius:12px; text-align:center; box-sizing:border-box;">
         """, height=72)
 
