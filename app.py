@@ -93,7 +93,7 @@ st.markdown("""
 </style>
 
 <div style="text-align:center;padding:5px 0 30px 0;">
-    <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png?v=2"
+    <img src="https://cdn.jsdelivr.net/gh/6Ace9/Cashin-Ink@main/logo.png?v=3"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
     <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
         LA — Premium Tattoo Studio
