@@ -91,30 +91,16 @@ st.markdown("""
     section.main { margin-bottom:0!important; padding-bottom:0!important; }
     .stApp > div:last-child { padding-bottom:0!important; margin-bottom:0!important; }
 </style>
-""", unsafe_allow_html=True)
-
-st.markdown('''
-<div class="main">
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
-</style>
 
 <div style="text-align:center;padding:5px 0 30px 0;">
     <img src="https://raw.githubusercontent.com/6Ace9/Cashin-Ink/refs/heads/main/logo.PNG"
          class="logo-glow" style="width:360px;height:auto;" loading="lazy">
-    
-    <h3 style="margin-top:20px; color:white; font-family: 'Great Vibes', cursive; 
-               font-size:3.2rem; font-weight:400; letter-spacing:4px; 
-               text-shadow: 
-               0 0 20px #00C853, 
-               0 0 40px #00C853, 
-               0 0 60px #00ff6c, 
-               0 0 80px #00ff6c;
-               animation: glow 4s ease-in-out infinite alternate;">
+    <h3 style="margin-top:20px;color:#00ff88;font-weight:300;font-size:1.9rem;letter-spacing:2px;">
         Cashin Ink
     </h3>
 </div>
 
+<div class="main">
 """, unsafe_allow_html=True)
 
 # ==================== CONFIG ====================
